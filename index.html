@@ -781,19 +781,24 @@ function InspectionForm(props){
     });
     return function(){cancelled=true;};
   },[cropId]);
-  /* Plot alias — some farms are the same physical location registered under a different
-     name in Land Cloud. Selecting the "mask" farm surfaces the aliased farm's plots too
-     (combined). Non-destructive: purely a client-side plot-lookup merge; Land Cloud and the
-     farms table are untouched, and both farm names stay independently selectable. */
+  /* Farm plot alias — some farms are the same physical location registered under a
+     different name in Land Cloud. Selecting the "mask" farm surfaces the aliased
+     farm's plots too (combined). Non-destructive: purely a client-side plot-lookup
+     merge; Land Cloud farm_blocks and the farms table are untouched. */
   var PLOT_ALIAS_BY_NAME={ 'Hana':['Badr'] }; /* pick Hana -> show Hana + Badr plots */
-  function plotsForFarm(farmName){
+  function plotsForFarmId(fid){
+    if(!fid) return [];
     var idMap=config.farmsIdMap||{};
-    var fid=farmName&&idMap[farmName];
-    var out=((fid&&plotsByFarm[fid])||[]).slice();
-    var extras=(farmName&&PLOT_ALIAS_BY_NAME[farmName])||[];
+    var out=(plotsByFarm[fid]||[]).slice();
+    var nm=Object.keys(idMap).filter(function(n){return idMap[n]===fid;})[0];
+    var extras=(nm&&PLOT_ALIAS_BY_NAME[nm])||[];
     extras.forEach(function(en){var eid=idMap[en];((eid&&plotsByFarm[eid])||[]).forEach(function(p){if(out.indexOf(p)===-1)out.push(p);});});
     out.sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});});
     return out;
+  }
+  function plotsForFarm(farmName){
+    var idMap=config.farmsIdMap||{};
+    return plotsForFarmId(farmName&&idMap[farmName]);
   }
 
   /* Guard: saving into a season that isn't the current active one prompts a confirm. */
@@ -2784,7 +2789,7 @@ function InspectionForm(props){
                 ce('div',{className:'form-field'},
                   ce('label',{className:'form-label'},'Plot '+(5+aidx)),
                   cropId==='citrus'
-                  ?ce(Typeahead,{value:af.plot||'',options:(af.farmId&&plotsByFarm[af.farmId])||[],placeholder:((af.farmId&&plotsByFarm[af.farmId])||[]).length?'Pick or type plot…':'Plot no.',minChars:0,allowFree:true,
+                  ?ce(Typeahead,{value:af.plot||'',options:plotsForFarmId(af.farmId),placeholder:plotsForFarmId(af.farmId).length?'Pick or type plot…':'Plot no.',minChars:0,allowFree:true,
                     onChange:function(i){return function(v){
                       setAdditionalFarms(function(prev){return prev.map(function(x,idx){return idx===i?Object.assign({},x,{plot:v}):x;});});
                     };}(aidx)})
@@ -5149,7 +5154,7 @@ function FGView(props){
           ce('textarea',{className:'form-input',rows:3,value:escNote,onChange:function(e){setEscNote(e.target.value);},placeholder:'e.g. Total defect 16.1% — thrips critical + sunburn above threshold. Requesting board exception review.',style:{resize:'vertical'}})
         ),
         ce('div',{style:{background:'#e8eeff',border:'1px solid #a0b4e8',borderRadius:6,padding:'8px 12px',fontSize:11,color:'#2a50c0',marginBottom:16}},
-          'ℹ After escalation the batch status changes to Escalated and appears in the Board Review queue. The original Reject decision is preserved until the board acts.'
+          'ℹ After escalation the batch status changes to Escalated and appears in the Escalation Review queue. The original Reject decision is preserved until the board acts.'
         ),
         ce('div',{style:{display:'flex',gap:8}},
           ce('button',{className:'btn btn-primary btn-sm',style:{background:'#2a50c0',borderColor:'#2a50c0',opacity:!escNote.trim()?.4:1},onClick:function(){
@@ -7621,9 +7626,9 @@ function HomeView(props){
   var tiles=[];
   if(perms.viewFG)        tiles.push({key:'fg',       view:'fg',         eyebrow:'Inspections',label:'Export Inspection',icon:'\u2713', hint:palletsToday+' pallets packed today', dynamicHint:true, primary:true, glow:'#6fc191', eyebrowColor:'#8fe0ad', big:activeToday.length, bigLabel:'active today'});
   if(perms.viewClientQC)  tiles.push({key:'clientqc', view:'clientqc',   eyebrow:'Reports',    label:'Client QC',        icon:'\uD83D\uDCCB', hint:'Reports & matching', glow:'#8079d4', eyebrowColor:'#b7b0f0'});
-  if(perms.viewShipments) tiles.push({key:'shipments',view:'shipments',  eyebrow:'Logistics',  label:'Shipments',        icon:'\uD83D\uDEA2', hint:'Records & claims', glow:'#d98a1f', eyebrowColor:'#e8c489'});
+  if(perms.viewShipments) tiles.push({key:'shipments',view:'shipments',  eyebrow:'Logistics',  label:'Shipments',        icon:'\uD83D\uDEA2', hint:'Records & tracking', glow:'#d98a1f', eyebrowColor:'#e8c489'});
   if(perms.viewAnalytics) tiles.push({key:'analytics',view:'analytics',  eyebrow:'Insights',   label:'Inspections Analytics',     icon:'\uD83D\uDCCA', hint:'Season trends', glow:'#3d9e6b', eyebrowColor:'#8fe0ad'});
-  if(perms.viewEscalation)tiles.push({key:'escalation',view:'escalation',eyebrow:'Escalations',label:'Board Review',     icon:'\u2691', hint:escalated.length+' escalated', dynamicHint:true, glow:'#ff6a52', eyebrowColor:'#ffa593', pulse:!loading&&escalated.length>0});
+  if(perms.viewEscalation)tiles.push({key:'escalation',view:'escalation',eyebrow:'Escalations',label:'Escalation Review',     icon:'\u2691', hint:escalated.length+' escalated', dynamicHint:true, glow:'#ff6a52', eyebrowColor:'#ffa593', pulse:!loading&&escalated.length>0});
 
   function tileEl(t){
     return ce('div',{key:t.key,className:'dh-tile'+(t.primary?' dh-primary':''),onClick:function(){goto(t);},
@@ -10204,6 +10209,11 @@ function ClientQCMgmt(props){
       setCqcClassify(function(m){return Object.assign({},m,{err:'Choose upgrade, downgrade or correction for each change.'});});
       return;
     }
+    var rid=cqcClassify.reportId||editRep;
+    if(!rid){
+      setCqcClassify(function(m){return Object.assign({},m,{err:'Lost track of which report this was. Reopen the report and try again.'});});
+      return;
+    }
     setCqcClassifySaving(true);
     var note=cqcClassify.note||null;
     /* Recorded BEFORE the form write, so from_score is read server-side from the live row and is
@@ -10214,7 +10224,7 @@ function ClientQCMgmt(props){
       chain=chain.then(function(){
         if(failed) return null;
         return supabase.rpc('record_cqc_score_revision',{
-          p_report_id:editRep,p_direction:g.direction,p_to_score:g.to,
+          p_report_id:rid,p_direction:g.direction,p_to_score:g.to,
           p_sample_numbers:g.nums&&g.nums.length?g.nums:null,p_note:note,p_origin:'form_save'
         }).then(function(res){ if(res.error) failed=res.error.message||'Could not record the change.'; });
       });
@@ -10232,6 +10242,74 @@ function ClientQCMgmt(props){
       setCqcClassify(null);cqcClassifyDoneRef.current=true;
       setTimeout(function(){saveReport();},0);
     });
+  }
+  /* Rendered from BOTH the form branch and the list branch. The form is an early return
+     (`if(showNew)`), so a modal defined only in the list tree could never appear while the form was
+     open — it surfaced only after "Back", by which point editRep was cleared. */
+  function renderCqcClassifyModal(){
+    if(!cqcClassify) return null;
+    function pill(s){
+      var su=String(s||'').toUpperCase();
+      var bg=su==='GREEN'?'var(--green-bg)':(su==='RED'||su==='NFA')?'#fff0f0':'var(--amber-bg)';
+      var fg=su==='GREEN'?'var(--green)':(su==='RED'||su==='NFA')?'var(--red)':'var(--amber)';
+      return {padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:500,background:bg,color:fg};
+    }
+    return ce('div',{style:{position:'fixed',inset:0,zIndex:9300,background:'rgba(20,28,22,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}},
+      ce('div',{style:{width:470,maxWidth:'100%',maxHeight:'92vh',overflowY:'auto',background:'var(--card)',border:'1px solid var(--border2)',borderRadius:16}},
+        ce('div',{style:{height:4,background:'var(--amber)',borderRadius:'16px 16px 0 0'}}),
+        ce('div',{style:{padding:'20px 22px'}},
+          ce('div',{style:{fontFamily:'var(--font-display)',fontSize:18,marginBottom:4}},'Scores changed'),
+          ce('div',{style:{fontSize:12,color:'var(--text3)',lineHeight:1.5,marginBottom:16}},
+            'Tell us what each change was, so it is recorded rather than overwritten.'),
+          (cqcClassify.groups||[]).map(function(g,gi){
+            function setDir(d){setCqcClassify(function(m){
+              var gs=(m.groups||[]).slice();gs[gi]=Object.assign({},gs[gi],{direction:d});
+              return Object.assign({},m,{groups:gs,err:''});
+            });}
+            var idents=(function(){
+              var vs={},fs={};
+              (g.rows||[]).forEach(function(r2){if(r2.variety)vs[r2.variety]=1;if(r2.farm)fs[r2.farm+(r2.plot?' '+r2.plot:'')]=1;});
+              return Object.keys(vs).concat(Object.keys(fs)).join(' · ');
+            })();
+            return ce('div',{key:g.key,style:{border:'1px solid var(--border)',borderRadius:8,padding:'11px 12px',marginBottom:9}},
+              ce('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:g.nums?5:9}},
+                ce('span',{style:{fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--text3)'}},
+                  g.nums?(g.nums.length+' sample'+(g.nums.length===1?'':'s')):'Whole container'),
+                g.from&&ce('span',{style:pill(g.from)},g.from),
+                ce('span',{style:{color:'var(--text3)'}},'→'),
+                ce('span',{style:pill(g.to)},g.to)
+              ),
+              g.nums&&ce('div',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',marginBottom:9}},
+                '#'+g.nums.join(' #')+(idents?(' · '+idents):'')),
+              ce('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
+                [['upgrade','Upgrade','var(--green)','var(--green-bg)','var(--green-border)'],
+                 ['downgrade','Downgrade','var(--red)','var(--red-bg)','var(--red-border)'],
+                 ['correction','Correction','var(--text2)','var(--bg2)','var(--border2)']].map(function(o){
+                  var on=g.direction===o[0];
+                  return ce('button',{key:o[0],onClick:function(){setDir(o[0]);},
+                    style:{fontSize:12,fontWeight:500,padding:'5px 11px',borderRadius:8,cursor:'pointer',fontFamily:'inherit',
+                      background:on?o[3]:'var(--card)',color:on?o[2]:'var(--text3)',
+                      border:(on?'1.5px solid '+o[4]:'1px solid var(--border2)')}},o[1]);
+                })
+              )
+            );
+          }),
+          ce('label',{className:'form-label'},'Note'),
+          ce('textarea',{className:'form-input',rows:2,style:{marginBottom:14,width:'100%',resize:'vertical'},
+            placeholder:'e.g. Client email 24/06 — splits found on arrival',
+            value:cqcClassify.note,
+            onChange:function(e){var v=e.target.value;setCqcClassify(function(m){return Object.assign({},m,{note:v});});}}),
+          ce('div',{style:{fontSize:11,color:'var(--text3)',lineHeight:1.5,marginBottom:14}},
+            'Corrections are still recorded, but are left out of upgrade and downgrade reporting.'),
+          cqcClassify.err&&ce('div',{className:'alert-fail',style:{marginBottom:12,fontSize:12}},cqcClassify.err),
+          ce('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
+            ce('button',{className:'btn btn-secondary',disabled:cqcClassifySaving,onClick:function(){setCqcClassify(null);}},'Back to form'),
+            ce('button',{className:'btn btn-primary',disabled:cqcClassifySaving,onClick:submitClassify},
+              cqcClassifySaving?'Recording…':'Save and record')
+          )
+        )
+      )
+    );
   }
   /* ── Duplicate-container warning state (new reports only) ── */
   var sCqcDup=useState(null); var cqcDup=sCqcDup[0]; var setCqcDup=sCqcDup[1];
@@ -11233,7 +11311,9 @@ function ClientQCMgmt(props){
       var _groups=cqcScoreDiffGroups();
       if(_groups.length>0){
         setCqcSaveErr('');
-        setCqcClassify({groups:_groups.map(function(g){return Object.assign({},g,{direction:''});}),note:'',err:''});
+        /* reportId is captured here, not read from editRep at submit time: the modal can outlive the
+           form (e.g. the user backs out), and editRep is cleared then, which sent a NULL id to the RPC. */
+        setCqcClassify({reportId:editRep,groups:_groups.map(function(g){return Object.assign({},g,{direction:''});}),note:'',err:''});
         return;
       }
     }
@@ -11487,6 +11567,8 @@ function ClientQCMgmt(props){
     var allowMixedVariety=(selCqcProd==='grapes');
 
     return ce('div',{style:{background:'var(--bg)',minHeight:'100vh'}},
+      /* classify step must render here too — the form is an early return */
+      renderCqcClassifyModal(),
       /* topbar */
       ce('div',{style:{background:'var(--card)',borderBottom:'1px solid var(--border)',padding:'0 26px',height:50,display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:20}},
         ce('div',{style:{display:'flex',alignItems:'center',gap:10}},
@@ -13094,81 +13176,30 @@ function ClientQCMgmt(props){
         function revChip(r,extraStyle){
           var revs=(r.revisions||[]).filter(function(v){return v.direction!=='correction';});
           if(revs.length===0) return null;
-          var last=revs[0];
-          var up=last.direction==='upgrade';
-          var label=up?'Upgraded':'Downgraded';
+          /* Label by the mix, not by the latest: "Downgraded x3" for 1 upgrade + 2 downgrades read as
+             three downgrades, and hid that the net movement was upward. */
+          var ups=revs.filter(function(v){return v.direction==='upgrade';}).length;
+          var downs=revs.length-ups;
+          var mixed=ups>0&&downs>0;
+          var up=ups>0&&downs===0;
+          var label=mixed?('Revised '+ups+'↑ '+downs+'↓'):(up?'Upgraded':'Downgraded');
           var title=revs.map(function(v){
             var when=v.at?new Date(v.at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
             var scope=v.sampleNumbers?(v.sampleNumbers.length+' sample'+(v.sampleNumbers.length===1?'':'s')):'whole container';
             return when+': '+(v.from||'—')+' → '+v.to+' ('+v.direction+', '+scope+')';
           }).join('\n');
+          var warm=up||mixed;
           return ce('span',{title:title,style:Object.assign({display:'inline-flex',alignItems:'center',gap:3,
-            background:up?'var(--amber-bg)':'#fff0f0',color:up?'var(--amber)':'var(--red)',
-            border:'1px solid '+(up?'var(--amber-border)':'#f5c0c0'),
+            background:warm?'var(--amber-bg)':'#fff0f0',color:warm?'var(--amber)':'var(--red)',
+            border:'1px solid '+(warm?'var(--amber-border)':'#f5c0c0'),
             borderRadius:4,padding:'2px 7px',fontSize:10,fontWeight:500,whiteSpace:'nowrap'},extraStyle||{})},
-            (up?'↑ ':'↓ ')+label+(revs.length>1?' ×'+revs.length:'')
+            (mixed?'⇅ ':(up?'↑ ':'↓ '))+label+((!mixed&&revs.length>1)?(' ×'+revs.length):'')
           );
         }
 
         return ce('div',null,
           /* ── Classify step: scores changed in the edit form ── */
-          cqcClassify&&ce('div',{style:{position:'fixed',inset:0,zIndex:9300,background:'rgba(20,28,22,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}},
-            ce('div',{style:{width:470,maxWidth:'100%',maxHeight:'92vh',overflowY:'auto',background:'var(--card)',border:'1px solid var(--border2)',borderRadius:16}},
-              ce('div',{style:{height:4,background:'var(--amber)',borderRadius:'16px 16px 0 0'}}),
-              ce('div',{style:{padding:'20px 22px'}},
-                ce('div',{style:{fontFamily:'var(--font-display)',fontSize:18,marginBottom:4}},'Scores changed'),
-                ce('div',{style:{fontSize:12,color:'var(--text3)',lineHeight:1.5,marginBottom:16}},
-                  'Tell us what each change was, so it is recorded rather than overwritten.'),
-                (cqcClassify.groups||[]).map(function(g,gi){
-                  function setDir(d){setCqcClassify(function(m){
-                    var gs=(m.groups||[]).slice();gs[gi]=Object.assign({},gs[gi],{direction:d});
-                    return Object.assign({},m,{groups:gs,err:''});
-                  });}
-                  var idents=(function(){
-                    var vs={},fs={};
-                    (g.rows||[]).forEach(function(r2){if(r2.variety)vs[r2.variety]=1;if(r2.farm)fs[r2.farm+(r2.plot?' '+r2.plot:'')]=1;});
-                    var p=Object.keys(vs).concat(Object.keys(fs));
-                    return p.join(' · ');
-                  })();
-                  return ce('div',{key:g.key,style:{border:'1px solid var(--border)',borderRadius:8,padding:'11px 12px',marginBottom:9}},
-                    ce('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:g.nums?5:9}},
-                      ce('span',{style:{fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--text3)'}},
-                        g.nums?(g.nums.length+' sample'+(g.nums.length===1?'':'s')):'Whole container'),
-                      g.from&&ce('span',{style:cqcScorePill(g.from)},g.from),
-                      ce('span',{style:{color:'var(--text3)'}},'→'),
-                      ce('span',{style:cqcScorePill(g.to)},g.to)
-                    ),
-                    g.nums&&ce('div',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',marginBottom:9}},
-                      '#'+g.nums.join(' #')+(idents?(' · '+idents):'')),
-                    ce('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
-                      [['upgrade','Upgrade','var(--green)','var(--green-bg)','var(--green-border)'],
-                       ['downgrade','Downgrade','var(--red)','var(--red-bg)','var(--red-border)'],
-                       ['correction','Correction','var(--text2)','var(--bg2)','var(--border2)']].map(function(o){
-                        var on=g.direction===o[0];
-                        return ce('button',{key:o[0],onClick:function(){setDir(o[0]);},
-                          style:{fontSize:12,fontWeight:500,padding:'5px 11px',borderRadius:8,cursor:'pointer',fontFamily:'inherit',
-                            background:on?o[3]:'var(--card)',color:on?o[2]:'var(--text3)',
-                            border:(on?'1.5px solid '+o[4]:'1px solid var(--border2)')}},o[1]);
-                      })
-                    )
-                  );
-                }),
-                ce('label',{className:'form-label'},'Note'),
-                ce('textarea',{className:'form-input',rows:2,style:{marginBottom:14,width:'100%',resize:'vertical'},
-                  placeholder:'e.g. Client email 24/06 — splits found on arrival',
-                  value:cqcClassify.note,
-                  onChange:function(e){var v=e.target.value;setCqcClassify(function(m){return Object.assign({},m,{note:v});});}}),
-                ce('div',{style:{fontSize:11,color:'var(--text3)',lineHeight:1.5,marginBottom:14}},
-                  'Corrections are still recorded, but are left out of upgrade and downgrade reporting.'),
-                cqcClassify.err&&ce('div',{className:'alert-fail',style:{marginBottom:12,fontSize:12}},cqcClassify.err),
-                ce('div',{style:{display:'flex',gap:8,justifyContent:'flex-end'}},
-                  ce('button',{className:'btn btn-secondary',disabled:cqcClassifySaving,onClick:function(){setCqcClassify(null);}},'Back to form'),
-                  ce('button',{className:'btn btn-primary',disabled:cqcClassifySaving,onClick:submitClassify},
-                    cqcClassifySaving?'Recording…':'Save and record')
-                )
-              )
-            )
-          ),
+          renderCqcClassifyModal(),
           /* ── Duplicate-container warning: routes a would-be clone into the revision flow ── */
           cqcDup&&cqcDup.length>0&&ce('div',{style:{position:'fixed',inset:0,zIndex:9200,background:'rgba(20,28,22,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}},
             ce('div',{style:{width:460,maxWidth:'100%',background:'var(--card)',border:'1px solid var(--border2)',borderRadius:16,overflow:'hidden'}},
@@ -14416,9 +14447,11 @@ function ShipmentsMgmt(props){
   var sCqcDetails=useState({}); var cqcDetails=sCqcDetails[0]; var setCqcDetails=sCqcDetails[1];
   var sInspMatches=useState({}); var inspMatches=sInspMatches[0]; var setInspMatches=sInspMatches[1];
   var sInspRows=useState({}); var inspRows=sInspRows[0]; var setInspRows=sInspRows[1];
+  /* True while CQC/INSP match enrichment is in flight (after product select) — so cells/tiles show a loading hint instead of a misleading 0/— */
+  var sCqcEnriching=useState(false); var cqcEnriching=sCqcEnriching[0]; var setCqcEnriching=sCqcEnriching[1];
   var sInspPopup=useState(null); var inspPopup=sInspPopup[0]; var setInspPopup=sInspPopup[1];
   var sShipCqc=React.useState(null);
-  /* Live-config ref — see CRMView: mount-only effect must not freeze pre-load config,
+  /* Live-config ref — a mount-only effect must not freeze pre-load config,
      or a deep-linked CQC report renders raw UUIDs / 0.0%. */
   var shipCfgRef=React.useRef(config); shipCfgRef.current=config;
   React.useEffect(function(){
@@ -14495,13 +14528,14 @@ function ShipmentsMgmt(props){
     setGrades([]);
     setCqcMatches({});setCqcRows({});setInspMatches({});setInspRows({});
     setLoading(true);
+    setCqcEnriching(true);
     /* Supabase caps at 1000 rows per request — paginate to get all */
     var allRows=[];
     function fetchPage(from){
       var q=supabase.from('shipments').select('*').eq('product_id',selProd).order('loading_date',{ascending:false}).range(from,from+999);
       if(config.activeSeasonId) q=q.eq('season_id',config.activeSeasonId);
       q.then(function(res){
-        if(res.error){console.error('[DalOS] Shipments load error:',res.error.message);setLoading(false);return;}
+        if(res.error){console.error('[DalOS] Shipments load error:',res.error.message);setLoading(false);setCqcEnriching(false);return;}
         allRows=allRows.concat(res.data||[]);
         if((res.data||[]).length===1000){
           /* More pages exist */
@@ -14519,7 +14553,7 @@ function ShipmentsMgmt(props){
             if(config.activeSeasonId) cqcQ=cqcQ.eq('season_id',config.activeSeasonId);
             cqcQ.then(function(cr){
                 setLoading(false);
-                if(cr.error) return;
+                if(cr.error){setCqcEnriching(false);return;}
                 var map={}; var rowsMap={};
                 /* normalise key: trim + collapse whitespace, uppercase */
                 function normCN(cn){return (cn||'').replace(/\s+/g,'').toUpperCase();}
@@ -14532,15 +14566,16 @@ function ShipmentsMgmt(props){
                 var inspQ=supabase.from('inspections_with_aggregates').select('id,container_number,status,decision,avg_total_defect,avg_brix,avg_carton_weight,date,packhouse_id,has_critical,variety_id,variety2_id,farm_id,trace_code,trace_codes,live_avg_total_defect,live_avg_brix').eq('product_id',selProd);
                 if(config.activeSeasonId) inspQ=inspQ.eq('season_id',config.activeSeasonId);
                 inspQ.then(function(ir){
-                  if(ir.error) return;
+                  if(ir.error){setCqcEnriching(false);return;}
                   var imap={}; var irows={};
                   (ir.data||[]).forEach(function(r){
                     var k=normCN(r.container_number);
                     if(k){ imap[k]=(imap[k]||0)+1; if(!irows[k])irows[k]=[]; irows[k].push(r); }
                   });
                   setInspMatches(imap); setInspRows(irows);
-                });
-              });
+                  setCqcEnriching(false);
+                }).catch(function(){setCqcEnriching(false);});
+              }).catch(function(){setLoading(false);setCqcEnriching(false);});
           });
         }
       });
@@ -14553,6 +14588,9 @@ function ShipmentsMgmt(props){
   }
   function cqcFor(cn){return cqcRows[(cn||'').replace(/\s+/g,'').toUpperCase()]||[];}
   function inspFor(cn){return inspRows[(cn||'').replace(/\s+/g,'').toUpperCase()]||[];}
+  /* Loading placeholders shown while CQC/INSP match enrichment is in flight (reuses global .dh-shim shimmer) */
+  function shimCell(){return ce('span',{className:'dh-shim',style:{width:20,height:12,borderRadius:6}});}
+  function shimStat(){return ce('span',{className:'dh-shim',style:{width:26,height:22,borderRadius:6,verticalAlign:'middle'}});}
   function _vname(id){return (config.varietiesIdToName&&id&&config.varietiesIdToName[id])||'';}
   function _vk(s){return (s||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'');}
   function _phk(s){var k=(s||'').toString().toLowerCase().replace(/[^a-z]/g,'').replace('packhouse','');if(k==='menia')k='menya';return k;}
@@ -14666,35 +14704,6 @@ function ShipmentsMgmt(props){
   function openRow(s){
     openContainer(s.container_number, s.container_number);
     setSelShip(s);
-  }
-
-  function saveContainerGrade(){
-    if(!selContainer) return;
-    setSaving(true);
-    /* selContainer may be "CONTAINER||CARTA" key or plain container_number */
-    var realCN=selContainer.indexOf('||')>=0?selContainer.split('||')[0]:selContainer;
-    var payload={
-      container_number:realCN,
-      product_id:selProd,
-      season_id:config.activeSeasonId||null,
-      grade:grade||null,
-      grade_notes:gradeNote||null,
-      has_claim:hasClaim,
-      claim_notes:claimNote||null,
-      claim_value:claimVal?parseFloat(claimVal):null,
-      claim_currency:claimCur||'USD',
-      updated_at:new Date().toISOString(),
-    };
-    supabase.from('shipment_container_grades').upsert(payload,{onConflict:'container_number,product_id,season_id'})
-      .then(function(res){
-        setSaving(false);
-        if(res.error){console.error('[DalOS] Grade save error:',res.error.message);return;}
-        setGrades(function(prev){
-          var existing=prev.find(function(g){return g.container_number===realCN;});
-          if(existing) return prev.map(function(g){return g.container_number===realCN?Object.assign({},g,payload):g;});
-          return prev.concat([Object.assign({},payload,{id:Date.now()})]);
-        });
-      });
   }
 
   /* ── Hero product selector ── */
@@ -14864,41 +14873,34 @@ function ShipmentsMgmt(props){
         ce('button',{style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18},onClick:function(){setSelContainer(null);setSelShip(null);}},'\u00d7')
       ),
       ce('div',{style:{padding:'14px 16px'}},
-        /* Grade section */
-        ce('div',{style:{background:grade?gradeBg(grade):'var(--bg2)',border:'1px solid '+(grade?'var(--border2)':'var(--border)'),borderRadius:8,padding:'12px 14px',marginBottom:12}},
-          ce('div',{style:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Grade'),
-          ce('div',{style:{display:'flex',gap:8,marginBottom:8}},
-            ['','A','B','C'].map(function(g2){
-              return ce('button',{key:g2||'none',
-                style:{flex:1,padding:'8px 4px',borderRadius:6,border:'2px solid '+(grade===g2?(g2?gradeColor(g2):'var(--border2)'):'var(--border)'),
-                  background:grade===g2?(g2?gradeBg(g2):'var(--bg2)'):'transparent',
-                  color:grade===g2?(g2?gradeColor(g2):'var(--text3)'):'var(--text3)',
-                  fontWeight:700,fontSize:14,cursor:'pointer'},
-                onClick:function(){setGrade(g2);}
-              },g2||'—');
-            })
+        /* Grade + claim moved to the CRM, which is the system of record. This page
+           kept a separate store that drifted against crm_gradings / crm_claims --
+           the same container could read "A, no claim" here and "C, open claim" in
+           the CRM. Reads stay so any historic record still displays. */
+        ce('div',{style:{background:'var(--amber-bg)',border:'1px solid var(--amber-border)',borderRadius:8,padding:'12px 14px',marginBottom:12}},
+          ce('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},
+            ce('span',{style:{fontSize:13,lineHeight:1}},'\u2192'),
+            ce('span',{style:{fontSize:10,fontWeight:600,color:'var(--amber)',textTransform:'uppercase',letterSpacing:'.06em'}},'Moved to DalOS Commercial')
           ),
-          ce('input',{className:'form-input',style:{fontSize:13,padding:'6px 10px'},placeholder:'Grade notes (optional)...',value:gradeNote,onChange:function(e){setGradeNote(e.target.value);}})
-        ),
-        /* Claim section */
-        ce('div',{style:{background:hasClaim?'var(--red-bg)':'var(--bg2)',border:'1px solid '+(hasClaim?'var(--red-border)':'var(--border)'),borderRadius:8,padding:'12px 14px',marginBottom:12}},
-          ce('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
-            ce('div',{style:{fontWeight:600,fontSize:13,color:hasClaim?'var(--red)':'var(--text2)'}},(hasClaim?'\uD83D\uDEA9 Claim flagged':'Flag as claim')),
-            ce('button',{style:{padding:'4px 12px',borderRadius:6,border:'1.5px solid '+(hasClaim?'var(--red)':'var(--border2)'),background:hasClaim?'var(--red)':'var(--card)',color:hasClaim?'#fff':'var(--text2)',fontSize:12,fontWeight:600,cursor:'pointer'},
-              onClick:function(){setHasClaim(function(p){return !p;});}
-            },hasClaim?'Remove':'+ Flag')
+          ce('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.55}},
+            'Grading and claims are now recorded in ',
+            ce('a',{href:'https://daloshq.com/commercial/',target:'_blank',rel:'noopener',style:{fontWeight:700,color:'inherit'}},'DalOS Commercial'),
+            '. Open ',
+            ce('b',null,'Shipments'),
+            ', find this container and use ',
+            ce('b',null,'Grade'),' or ',ce('b',null,'Raise claim'),'.'
           ),
-          hasClaim&&ce('div',null,
-            ce('div',{style:{display:'flex',gap:6,marginBottom:8}},
-              ce('select',{style:{width:70,padding:'6px 6px',border:'1px solid var(--border2)',borderRadius:6,fontSize:13,background:'var(--card)',flexShrink:0},value:claimCur,onChange:function(e){setClaimCur(e.target.value);}},
-                ['USD','EUR','GBP','EGP'].map(function(c){return ce('option',{key:c,value:c},c);})
-              ),
-              ce('input',{style:{flex:1,padding:'6px 10px',border:'1px solid var(--border2)',borderRadius:6,fontSize:13,background:'var(--card)'},type:'number',step:'0.01',min:'0',placeholder:'Claim value (optional)',value:claimVal,onChange:function(e){setClaimVal(e.target.value);}})
-            ),
-            ce('textarea',{style:{width:'100%',padding:'8px 10px',border:'1px solid var(--border2)',borderRadius:6,fontSize:13,background:'var(--card)',resize:'vertical',minHeight:60},placeholder:'Claim notes...',value:claimNote,onChange:function(e){setClaimNote(e.target.value);}})
+          (g&&(g.grade||g.has_claim))&&ce('div',{style:{marginTop:11,paddingTop:10,borderTop:'1px solid var(--amber-border)'}},
+            ce('div',{style:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:7}},'Previously recorded here'),
+            g.grade&&ce('div',{style:{display:'inline-block',padding:'3px 9px',borderRadius:6,marginBottom:6,fontWeight:700,fontSize:12,
+                background:gradeBg(g.grade),color:gradeColor(g.grade),border:'1px solid var(--border2)'}},'Grade '+g.grade),
+            g.grade_notes&&ce('div',{style:{fontSize:12,color:'var(--text2)',marginBottom:5}},g.grade_notes),
+            g.has_claim&&ce('div',{style:{fontSize:12,color:'var(--red)',fontWeight:600}},
+              '\uD83D\uDEA9 Claim flagged'+(g.claim_value?' \u00b7 '+(g.claim_currency||'USD')+' '+Number(g.claim_value).toLocaleString():'')),
+            g.claim_notes&&ce('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},g.claim_notes),
+            ce('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8,fontStyle:'italic'}},'Read-only \u2014 not kept in step with the CRM.')
           )
         ),
-        ce('button',{className:'btn btn-primary',style:{width:'100%',marginBottom:16},onClick:saveContainerGrade},saving?'Saving...':'Save grade & claim'),
         /* \u2500\u2500 Matched CQC reports \u2014 expandable summaries \u2500\u2500 */
         cqcCount>0&&ce('div',{style:{marginBottom:16}},
           ce('div',{style:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'CQC Reports ('+cqcCount+')'),
@@ -15038,7 +15040,6 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
         ce('button',{className:'btn btn-secondary btn-sm',onClick:function(){setSelProd(null);setSelShip(null);setSelContainer(null);setSearch('');setStatusFilter('');setCountryFilter([]);setCqcShipFilter('all');}},'\u2190 Products'),
         ce('div',{style:{width:10,height:10,borderRadius:'50%',background:selProdObj.color||'var(--accent)',flexShrink:0}}),
         ce('span',{style:{fontFamily:'var(--font-display)',fontSize:16}},selProdObj.name,' Shipments'),
-        totalClaims>0&&ce('span',{className:'badge badge-fail',style:{fontSize:11}},totalClaims+' claim'+(totalClaims===1?'':'s')),
         totalGraded>0&&ce('span',{className:'badge badge-pass',style:{fontSize:11}},totalGraded+' graded'),
         /* Toggle */
         ce('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:8,padding:'3px'}},
@@ -15102,26 +15103,26 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
         ),
         ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'Claims'),
-          ce('div',{className:'kpi-value',style:{fontSize:22,color:totalClaims>0?'var(--red)':'var(--text)'}},
-            aggMode
-              ?filteredContainers.filter(function(c){var g=getGrade(c.container_number);return g&&g.has_claim;}).length
-              :filteredRows.filter(function(s){var g=getGrade(s.container_number);return g&&g.has_claim;}).length
-          )
+          ce('div',{className:'kpi-value',style:{fontSize:13,color:'var(--text3)',fontWeight:500,paddingTop:5}},'in CRM')
         ),
         ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'With CQC'),
           ce('div',{className:'kpi-value',style:{fontSize:22,color:'var(--green)'}},
-            aggMode
-              ?filteredContainers.filter(function(c){return (cqcMatches[(c.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).length
-              :[...new Set(filteredRows.filter(function(s){return (cqcMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length
+            cqcEnriching
+              ?shimStat()
+              :(aggMode
+                ?filteredContainers.filter(function(c){return (cqcMatches[(c.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).length
+                :[...new Set(filteredRows.filter(function(s){return (cqcMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length)
           )
         ),
         ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'With insp'),
           ce('div',{className:'kpi-value',style:{fontSize:22,color:'#2563ad'}},
-            aggMode
-              ?filteredContainers.filter(function(c){return (inspMatches[(c.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).length
-              :[...new Set(filteredRows.filter(function(s){return (inspMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length
+            cqcEnriching
+              ?shimStat()
+              :(aggMode
+                ?filteredContainers.filter(function(c){return (inspMatches[(c.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).length
+                :[...new Set(filteredRows.filter(function(s){return (inspMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length)
           )
         ),
         ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
@@ -15208,10 +15209,10 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                     ce('td',null, statArr.length? statArr.map(function(st,i){return ce('span',{key:i,className:'badge '+(st==='Delivered'?'badge-pass':st==='In Transit'?'badge-warn':'badge-neutral'),style:{fontSize:10,marginRight:3}},st);}) : ce('span',{style:{color:'var(--text3)',fontSize:12}},'\u2014')),
                     ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},c.total_cartons||'—'),
                     ce('td',{style:{textAlign:'center'}},
-                      cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
+                      cqcEnriching?shimCell():(cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
                     ce('td',{style:{textAlign:'center'}},
-                      inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
+                      cqcEnriching?shimCell():(inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
                     ce('td',{style:{textAlign:'center'}},
                       g&&g.grade?ce('span',{style:{fontWeight:700,color:gradeColor(g.grade),fontSize:14}},g.grade):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
@@ -15255,10 +15256,10 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                     ce('td',null,s.shipping_status?ce('span',{className:'badge '+(s.shipping_status==='Delivered'?'badge-pass':s.shipping_status==='In Transit'?'badge-warn':'badge-neutral'),style:{fontSize:10}},s.shipping_status):'—'),
                     ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},s.carton_count||'—'),
                     ce('td',{style:{textAlign:'center'}},
-                      cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
+                      cqcEnriching?shimCell():(cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
                     ce('td',{style:{textAlign:'center'}},
-                      inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
+                      cqcEnriching?shimCell():(inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
                     ce('td',{style:{textAlign:'center'}},
                       g&&g.grade?ce('span',{style:{fontWeight:700,color:gradeColor(g.grade),fontSize:14}},g.grade):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
@@ -15312,7 +15313,7 @@ function EscalationReview(props){
       ce('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:6}},
         ce('div',{style:{width:40,height:40,borderRadius:10,background:'#e8eeff',border:'1px solid #a0b4e8',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}},'\u2B06'),
         ce('div',null,
-          ce('div',{style:{fontFamily:'var(--font-display)',fontSize:24}},'Board Review'),
+          ce('div',{style:{fontFamily:'var(--font-display)',fontSize:24}},'Escalation Review'),
           ce('div',{style:{fontSize:12,color:'var(--text3)',marginTop:1}},'Escalated inspections awaiting senior board decision')
         )
       )
@@ -17752,9 +17753,9 @@ function App(){
   availViews.push({id:'home', label:'Vision Home', sub:'Overview'});
   if(perms.viewFG)           availViews.push({id:'fg',         label:'Export Inspection', sub:'FG / Export'});
   if(perms.viewClientQC)     availViews.push({id:'clientqc',   label:'Client QC',         sub:'Reports & matching'});
-  if(perms.viewShipments)    availViews.push({id:'shipments',  label:'Shipments',         sub:'Records & claims'});
+  if(perms.viewShipments)    availViews.push({id:'shipments',  label:'Shipments',         sub:'Records & tracking'});
   if(perms.viewAnalytics)    availViews.push({id:'analytics',  label:'Inspections Analytics',      sub:'Dashboard'});
-  if(perms.viewEscalation)   availViews.push({id:'escalation', label:'Board Review',      sub:'Escalation queue'});
+  if(perms.viewEscalation)   availViews.push({id:'escalation', label:'Escalation Review',      sub:'Escalation queue'});
   if(perms.viewAdmin)        availViews.push({id:'admin',      label:'Admin',             sub:'Users & access'});
   var cropInfo=(config.products||CROPS).find(function(c){return c.id===cropId;})||{name:'',color:'#2b5c3f'};
   /* phInfo: only use live config, not INITIAL_CONFIG fallback, to avoid showing stale hardcoded name */
