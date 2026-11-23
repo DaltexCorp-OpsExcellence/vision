@@ -288,6 +288,49 @@ function normTC(arr){
   }).filter(Boolean);
 }
 
+/* Sample-line Notes popup helpers (grapes 'np-' + citrus/mango 'mnp-').
+   vnpOpen is idempotent (always opens, never toggles); closing = textarea blur, Escape or ×. */
+function vnpEnsureCss(){
+  if(document.getElementById('vnp-css')) return;
+  var s=document.createElement('style');s.id='vnp-css';
+  s.textContent='.vnp-cell{min-height:32px;height:32px;box-sizing:border-box}.vnp-ta::placeholder{color:#6b7280;opacity:1}.vnp-ta:focus{outline:2px solid var(--accent,#2e7d4f);outline-offset:1px}';
+  document.head.appendChild(s);
+}
+function vnpOpen(popup,cell){
+  if(!popup||!cell) return;
+  vnpEnsureCss();
+  popup._vnpOpener=cell;
+  /* measure without flashing */
+  popup.style.visibility='hidden';popup.style.display='block';
+  var ph=popup.offsetHeight||130;
+  var rect=cell.getBoundingClientRect();
+  var tb=document.querySelector('.form-topbar');
+  var headerBottom=Math.max(0,tb?tb.getBoundingClientRect().bottom:0);
+  var top;
+  if(rect.top-headerBottom-8>=ph){top=rect.top-ph-8;}
+  else{top=rect.bottom+8;if(top+ph>window.innerHeight-4)top=Math.max(headerBottom+4,window.innerHeight-ph-4);}
+  popup.style.top=top+'px';
+  popup.style.left=Math.max(4,Math.min(window.innerWidth-240-4,rect.left-80))+'px';
+  popup.style.visibility='';
+  setTimeout(function(){var ta=popup.querySelector('textarea');if(ta){ta.focus({preventScroll:true});var n=ta.value.length;try{ta.setSelectionRange(n,n);}catch(_e){}ta.scrollTop=ta.scrollHeight;}},0);
+}
+function vnpClose(popup){
+  if(!popup) return;
+  popup.style.display='none';
+  var ta=popup.querySelector('textarea');
+  if(ta&&document.activeElement===ta) ta.blur();
+  /* return focus to the opening cell (Escape / × only; the blur-elsewhere path never calls vnpClose) */
+  var op=popup._vnpOpener;
+  if(op&&op.isConnected&&typeof op.focus==='function'){try{op.focus({preventScroll:true});}catch(_e){}}
+}
+/* Cell keyboard: Enter/Space opens. Guard target — keydowns from the portal textarea bubble here through the React tree. */
+function vnpCellKey(prefix,id){
+  return function(e){
+    if(e.target!==e.currentTarget) return;
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();vnpOpen(document.getElementById(prefix+id),e.currentTarget);}
+  };
+}
+
 function InspectionForm(props){
   var onClose=props.onClose, batch=props.batch||null;
   var packhouse=props.packhouse||{name:'—',id:'—',color:'#2b5c3f'};
@@ -3204,37 +3247,30 @@ null /* GGN, PH code, Farm code, Net weight moved to header — removed from sti
                           ce('span',{style:{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,color:crit?'var(--red)':tot>10?'var(--amber)':tot>0?'var(--text2)':'var(--text3)'}},tot>0?tot.toFixed(1)+'%':'—')
                         );
                       })(),
-                      ce('div',{style:{position:'relative',width:'100%'},
-                        onMouseEnter:function(e){
-                          var popup=document.getElementById('np-'+row.id);
-                          if(!popup) return;
-                          var rect=e.currentTarget.getBoundingClientRect();
-                          var ph=popup.offsetHeight||130;
-                          popup.style.top=(rect.top+window.scrollY-ph-8)+'px';
-                          popup.style.left=Math.max(4,rect.left+window.scrollX-80)+'px';
-                          popup.style.display='block';
-                        },
-                        onMouseLeave:function(e){
-                          setTimeout(function(){
-                            var popup=document.getElementById('np-'+row.id);
-                            if(popup&&document.activeElement!==popup.querySelector('textarea'))popup.style.display='none';
-                          },150);
-                        }
+                      ce('div',{className:'vnp-cell',style:{position:'relative',width:'100%',cursor:'pointer',height:32,minHeight:32,minWidth:32,boxSizing:'border-box',display:'flex',alignItems:'stretch'},
+                        tabIndex:0,role:'button','aria-label':'Edit sample notes',
+                        onKeyDown:vnpCellKey('np-',row.id),
+                        onClick:function(e){vnpOpen(document.getElementById('np-'+row.id),e.currentTarget);}
                       },
-                        ce('div',{style:{padding:'3px 6px',borderRadius:4,border:'1px solid '+(row.notes?'var(--accent)':'var(--border2)'),background:row.notes?'#edf5e9':'var(--card)',cursor:'text',fontSize:11,color:row.notes?'var(--accent)':'var(--text3)',minHeight:26,display:'flex',alignItems:'center',gap:4,overflow:'hidden'}},
+                        ce('div',{style:{flex:1,padding:'3px 6px',borderRadius:4,border:'1px solid '+(row.notes?'var(--accent)':'var(--border2)'),background:row.notes?'#edf5e9':'var(--card)',cursor:'pointer',fontSize:11,color:row.notes?'var(--accent)':'var(--text3)',height:'100%',minHeight:32,boxSizing:'border-box',display:'flex',alignItems:'center',gap:4,overflow:'hidden'}},
                           ce('span',{style:{flexShrink:0,fontSize:12}},'✏︎'),
                           row.notes&&ce('span',{style:{fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}},row.notes)
                         ),
-                        ce('div',{id:'np-'+row.id,style:{display:'none',position:'fixed',zIndex:99999,background:'var(--card)',border:'1.5px solid var(--border2)',borderRadius:8,boxShadow:'0 8px 32px rgba(0,0,0,.22)',padding:10,width:240,pointerEvents:'all'}},
-                          ce('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.05em'}},'Sample notes'),
-                          ce('textarea',{autoFocus:true,
-                            style:{width:'100%',minHeight:90,padding:'6px 8px',border:'1px solid var(--border2)',borderRadius:6,fontSize:12,resize:'vertical',background:'var(--card)',fontFamily:'inherit',outline:'none',boxSizing:'border-box'},
+                        ReactDOM.createPortal(ce('div',{id:'np-'+row.id,onClick:function(e){e.stopPropagation();},style:{display:'none',position:'fixed',zIndex:99999,background:'var(--card)',border:'1.5px solid var(--border2)',borderRadius:8,boxShadow:'0 8px 32px rgba(0,0,0,.22)',padding:10,width:240,pointerEvents:'all',cursor:'auto'}},
+                          ce('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+                            ce('div',{style:{fontSize:12,fontWeight:700,color:'#4b5563',textTransform:'uppercase',letterSpacing:'.05em'}},'Sample notes'),
+                            ce('button',{type:'button','aria-label':'Close notes',title:'Close',style:{width:32,height:32,minWidth:32,minHeight:32,boxSizing:'border-box',border:'1px solid var(--border2)',borderRadius:6,background:'var(--card)',color:'#4b5563',fontSize:20,lineHeight:1,display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flexShrink:0},
+                              onMouseDown:function(e){e.preventDefault();},
+                              onClick:function(id){return function(){vnpClose(document.getElementById('np-'+id));};}(row.id)},'×')
+                          ),
+                          ce('textarea',{autoFocus:true,className:'vnp-ta',
+                            style:{width:'100%',minHeight:90,padding:'6px 8px',border:'1px solid var(--border2)',borderRadius:6,fontSize:12,resize:'vertical',background:'var(--card)',fontFamily:'inherit',boxSizing:'border-box'},
                             placeholder:'Add notes...',value:row.notes,
-                            onMouseEnter:function(e){document.getElementById('np-'+row.id).style.display='block';},
-                            onBlur:function(id){return function(){document.getElementById('np-'+id).style.display='none';};}(row.id),
+                            onBlur:function(id){return function(){var p=document.getElementById('np-'+id);if(p)p.style.display='none';};}(row.id),
+                            onKeyDown:function(id){return function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();vnpClose(document.getElementById('np-'+id));}};}(row.id),
                             onChange:function(i,id){return function(e){updateRowField(i,id,'notes',e.target.value);};}(pIdx,row.id)
                           })
-                        )
+                        ),document.body)
                       ),
                       /* Pass/Fail — validates required fields on first click attempt */
                       (function(){
@@ -3547,36 +3583,30 @@ null /* GGN, PH code, Farm code, Net weight moved to header — removed from sti
                         );
                       }),
                       (isMangoTbl||cropId==='citrus')
-                      ?ce('div',{
-                          onMouseEnter:function(e){
-                            var popup=document.getElementById('mnp-'+row.id);
-                            if(!popup) return;
-                            var rect=e.currentTarget.getBoundingClientRect();
-                            var ph=popup.offsetHeight||130;
-                            popup.style.top=(rect.top+window.scrollY-ph-8)+'px';
-                            popup.style.left=Math.max(4,rect.left+window.scrollX-80)+'px';
-                            popup.style.display='block';
-                          },
-                          onMouseLeave:function(e){
-                            setTimeout(function(){
-                              var popup=document.getElementById('mnp-'+row.id);
-                              if(popup&&document.activeElement!==popup.querySelector('textarea'))popup.style.display='none';
-                            },150);
-                          }
+                      ?ce('div',{className:'vnp-cell',style:{cursor:'pointer',height:32,minHeight:32,minWidth:32,boxSizing:'border-box',width:'100%',display:'flex',alignItems:'stretch'},
+                          tabIndex:0,role:'button','aria-label':'Edit sample notes',
+                          onKeyDown:vnpCellKey('mnp-',row.id),
+                          onClick:function(e){vnpOpen(document.getElementById('mnp-'+row.id),e.currentTarget);}
                         },
-                          ce('div',{style:{padding:'3px 6px',borderRadius:4,border:'1px solid '+(row.notes?'var(--accent)':'var(--border2)'),background:row.notes?'#edf5e9':'var(--card)',cursor:'text',fontSize:11,color:row.notes?'var(--accent)':'var(--text3)',minHeight:26,display:'flex',alignItems:'center',gap:4,overflow:'hidden'}},
+                          ce('div',{style:{flex:1,padding:'3px 6px',borderRadius:4,border:'1px solid '+(row.notes?'var(--accent)':'var(--border2)'),background:row.notes?'#edf5e9':'var(--card)',cursor:'pointer',fontSize:11,color:row.notes?'var(--accent)':'var(--text3)',height:'100%',minHeight:32,boxSizing:'border-box',display:'flex',alignItems:'center',gap:4,overflow:'hidden'}},
                             ce('span',{style:{flexShrink:0,fontSize:12}},'✏︎'),
                             row.notes&&ce('span',{style:{fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}},row.notes)
                           ),
-                          ce('div',{id:'mnp-'+row.id,style:{display:'none',position:'fixed',zIndex:99999,background:'var(--card)',border:'1.5px solid var(--border2)',borderRadius:8,boxShadow:'0 8px 32px rgba(0,0,0,.22)',padding:10,width:240,pointerEvents:'all'}},
-                            ce('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.05em'}},'Sample notes'),
-                            ce('textarea',{autoFocus:true,
-                              style:{width:'100%',minHeight:90,padding:'6px 8px',border:'1px solid var(--border2)',borderRadius:6,fontSize:12,resize:'vertical',background:'var(--card)',fontFamily:'inherit',outline:'none',boxSizing:'border-box'},
+                          ReactDOM.createPortal(ce('div',{id:'mnp-'+row.id,onClick:function(e){e.stopPropagation();},style:{display:'none',position:'fixed',zIndex:99999,background:'var(--card)',border:'1.5px solid var(--border2)',borderRadius:8,boxShadow:'0 8px 32px rgba(0,0,0,.22)',padding:10,width:240,pointerEvents:'all',cursor:'auto'}},
+                            ce('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+                              ce('div',{style:{fontSize:12,fontWeight:700,color:'#4b5563',textTransform:'uppercase',letterSpacing:'.05em'}},'Sample notes'),
+                              ce('button',{type:'button','aria-label':'Close notes',title:'Close',style:{width:32,height:32,minWidth:32,minHeight:32,boxSizing:'border-box',border:'1px solid var(--border2)',borderRadius:6,background:'var(--card)',color:'#4b5563',fontSize:20,lineHeight:1,display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flexShrink:0},
+                                onMouseDown:function(e){e.preventDefault();},
+                                onClick:function(id){return function(){vnpClose(document.getElementById('mnp-'+id));};}(row.id)},'×')
+                            ),
+                            ce('textarea',{autoFocus:true,className:'vnp-ta',
+                              style:{width:'100%',minHeight:90,padding:'6px 8px',border:'1px solid var(--border2)',borderRadius:6,fontSize:12,resize:'vertical',background:'var(--card)',fontFamily:'inherit',boxSizing:'border-box'},
                               placeholder:'Add notes...',value:row.notes,
                               onBlur:function(id){return function(){var p=document.getElementById('mnp-'+id);if(p)p.style.display='none';};}(row.id),
+                              onKeyDown:function(id){return function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();vnpClose(document.getElementById('mnp-'+id));}};}(row.id),
                               onChange:function(i,id){return function(e){updateRowField(i,id,'notes',e.target.value);};}(pIdx,row.id)
                             })
-                          )
+                          ),document.body)
                         )
                       :ce('input',{style:{padding:'4px 6px',border:'1px solid var(--border2)',borderRadius:4,fontSize:11,width:'100%',background:'var(--card)'},placeholder:'Notes...',value:row.notes,onChange:function(i,id){return function(e){updateRowField(i,id,'notes',e.target.value);};}(pIdx,row.id)}),
                       ce('div',{style:{display:'flex',flexDirection:'column',gap:2}},
