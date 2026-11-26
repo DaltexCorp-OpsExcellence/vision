@@ -41,7 +41,7 @@ var OC_PENDING='Preview: saving turns on after the database step';   /* v0.2 P3 
 function otherCropsEnabled(){
   /* v0.2 (Ash): ON only when index.html's config says so AND this is the staging host (VISION_IS_DEV, set in index.html from
      the address: path /dalos-vision-dev/ or localhost). The prod address always resolves OFF, whatever its config says. */
-  return window.SV2_OTHER_CROPS_ENABLED===true&&window.VISION_IS_DEV===true;
+  return window.SV2_OTHER_CROPS_ENABLED===true;   /* 2026-11-26 (Tarek): index.html decides (staging VISION_IS_DEV, prod explicit) */
 }
 function intakeFieldsEnabled(){
   if(SV2_INTAKE_FIELDS_ENABLED)return true;
@@ -65,6 +65,7 @@ var CSS=[
 '.sv2-search{position:relative;flex:1 1 220px;max-width:340px}',
 '.sv2-search input{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:7px 30px 7px 10px;font:13px var(--font-body);color:var(--text);outline:none}',
 '.sv2-search input:focus{border-color:var(--accent)}',
+'.sv2-search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}',   /* only the custom ✕ shows */
 '.sv2-clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--text3);cursor:pointer;font-size:13px;display:none;padding:2px 4px}',
 '.sv2-search.has .sv2-clr{display:block}',
 '.sv2-btn{font:500 13px var(--font-body);border-radius:var(--r);padding:7px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}',
@@ -142,6 +143,7 @@ var CSS=[
 '.sv2-lines th{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);text-align:left;padding:6px 5px;border-bottom:2px solid var(--border2);font-weight:600;white-space:nowrap}',
 '.sv2-lines td{padding:4px 5px;border-bottom:1px solid var(--bg2);vertical-align:middle}',
 '.sv2 .cin,.sv2 .csel{width:100%;min-width:62px;background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:4px 6px;font:12px var(--font-body);color:var(--text)}',
+'.sv2 .sv2-lines .csel[data-k="carton_type"],.sv2 .sv2-lines .csel[data-k="pack_house"]{min-width:150px}',   /* 2026-11-26: carton type / packed at no longer cut in the line table */
 '.sv2 .cin.mono,.sv2 .cin.num{font-family:var(--font-mono)}.sv2 .cin.num{text-align:right;min-width:58px}',
 '.sv2 .cin.calc{background:transparent;color:var(--text);font-weight:500;border-color:transparent;border-bottom:1px dotted var(--border2);border-radius:0;cursor:default;box-shadow:none}',
 '.sv2 .cin.warn,.sv2-in.warn{border-color:var(--amber);background:var(--amber-bg)}',
@@ -150,6 +152,8 @@ var CSS=[
 '.sv2-wgh small{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400}',
 '.sv2-ctnwarn,.sv2-kgwarn{display:none;font-size:12px;color:#7a4a10;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;padding:6px 10px;flex-basis:100%}',
 '.sv2-ctnwarn.on,.sv2-kgwarn.on{display:block}',
+'.sv2-ctnwarn.ok,.sv2-pend.ok{color:var(--green);background:var(--green-bg);border-color:var(--green-border)}',   /* 2026-11-26: carton match = green ok state, no layout jump */
+'@media (max-width:700px){.sv2-submit .sv2-ctnwarn.ok{display:none!important}}',   /* phones: the ok line would grow the Save bar */
 /* r2 P1: plain inline message under a flagged carton weight (warn-only, never blocks save) */
 '.sv2-wmsg{font-size:12px;line-height:1.35;color:#7a4a10;margin-top:3px}.sv2-wmsg[hidden]{display:none}',
 '.sv2-lines .idx{font-family:var(--font-mono);color:var(--text3)}',
@@ -159,7 +163,7 @@ var CSS=[
 '.sv2-dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 10px;padding:4px 0}',
 '.sv2-dlab{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:3px}',
 /* 2026-11-17 layout (mock-up): line panel = Classification / Weight inputs / Results */
-'.sv2-u{text-transform:none;letter-spacing:0;font-family:var(--font-mono);font-weight:400;color:var(--text2)}.sv2-echo{font:11px var(--font-mono);color:var(--text2);margin-top:2px;text-align:right;min-height:14px}.sv2-echo.warn{color:#7a4a10}.sv2-echo.ok{color:var(--green)}.sv2-auto{font:500 9px var(--font-mono);color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;margin-left:5px;text-transform:none;letter-spacing:0;vertical-align:1px}.sv2-panel{display:grid;grid-template-columns:2.1fr 1fr 1.5fr;gap:10px;padding:6px 0 10px}.sv2-blk{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:grid;gap:8px;align-content:start;min-width:0}.sv2-bt{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}.sv2-bgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}.sv2-bgrid .s2{grid-column:span 2}.sv2-rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}.sv2-pend{grid-column:1/-1;font-size:12px;color:#6e4a0e;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 9px}.sv2-pend[hidden]{display:none}.sv2-rgrid.pending .cin.calc{color:var(--text3)}.sv2-cat{font-size:11px!important;min-height:0!important;padding:1px 4px!important;margin-bottom:3px;color:var(--text2);border-color:var(--border)!important}.sv2 .rm{opacity:.75}.sv2-goprob{font:500 13px var(--font-body);color:var(--red);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}.sv2-goprob[hidden]{display:none}.sv2-tot .v small{font-size:13px;color:var(--text2)}.sv2-tot.warn .v,.sv2-tot.warn .v small{color:#7a4a10}.sv2-undo{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a17;color:#f0ede6;font:13px var(--font-body,sans-serif);padding:8px 10px 8px 16px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:91;display:flex;gap:12px;align-items:center}.sv2-undo button{font:600 13px var(--font-body,sans-serif);background:none;border:1px solid #6a8068;color:#c8e6cf;border-radius:6px;padding:4px 10px;cursor:pointer}@media (max-width:1100px){.sv2-panel{grid-template-columns:1fr 1fr}.sv2-panel .sv2-blk:first-child{grid-column:1/-1}}',
+'.sv2-u{text-transform:none;letter-spacing:0;font-family:var(--font-mono);font-weight:400;color:var(--text2)}.sv2-echo{font:11px var(--font-mono);color:var(--text2);margin-top:2px;text-align:right;min-height:14px}.sv2-echo.warn{color:#7a4a10}.sv2-echo.hint{font-family:var(--font-body);color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sv2-echo.ok{color:var(--green)}.sv2-auto{font:500 9px var(--font-mono);color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;margin-left:5px;text-transform:none;letter-spacing:0;vertical-align:1px}.sv2-panel{display:grid;grid-template-columns:2.1fr 1fr 1.5fr;gap:10px;padding:6px 0 10px}.sv2-blk{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:grid;gap:8px;align-content:start;min-width:0}.sv2-bt{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}.sv2-bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px 10px}.sv2-bgrid .s2{grid-column:span 2}.sv2-rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}.sv2-pend{grid-column:1/-1;font-size:12px;color:#6e4a0e;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 9px}.sv2-pend[hidden]{display:none}.sv2-rgrid.pending .cin.calc{color:var(--text3)}.sv2-cat{font-size:11px!important;min-height:0!important;padding:1px 4px!important;margin-bottom:3px;color:var(--text2);border-color:var(--border)!important}.sv2 .rm{opacity:.75}.sv2-goprob{font:500 13px var(--font-body);color:var(--red);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}.sv2-goprob[hidden]{display:none}.sv2-tot .v small{font-size:13px;color:var(--text2)}.sv2-tot.warn .v,.sv2-tot.warn .v small{color:#7a4a10}.sv2-undo{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a17;color:#f0ede6;font:13px var(--font-body,sans-serif);padding:8px 10px 8px 16px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:91;display:flex;gap:12px;align-items:center}.sv2-undo button{font:600 13px var(--font-body,sans-serif);background:none;border:1px solid #6a8068;color:#c8e6cf;border-radius:6px;padding:4px 10px;cursor:pointer}@media (max-width:1100px){.sv2-panel{grid-template-columns:1fr 1fr}.sv2-panel .sv2-blk:first-child{grid-column:1/-1}}',
 '.sv2-cgwraw{font-size:10.5px;color:var(--text3);margin-top:2px}',
 '.sv2-ib{border:1px solid var(--border);background:var(--card);border-radius:5px;cursor:pointer;color:var(--text3);font-size:13px;line-height:1;padding:3px 7px}',
 '.sv2-ib.open{transform:rotate(180deg)}.sv2-ib.rm:hover{color:var(--red);border-color:var(--red-border)}',
@@ -173,7 +177,8 @@ var CSS=[
 '.sv2.sv2-ro [data-act="openCreate"],.sv2.sv2-ro [data-act="save"],.sv2.sv2-ro [data-act="saveNew"],.sv2.sv2-ro [data-act="delShip"],.sv2.sv2-ro [data-act="addLine"],.sv2.sv2-ro [data-act="dupLast"],.sv2.sv2-ro [data-act="rmLine"],.sv2.sv2-ro [data-act="ocConfig"],.sv2.sv2-ro .sv2-submit,.sv2.sv2-ro .sv2-dirty{display:none!important}',
 '.sv2-qc{display:inline-flex;gap:4px;flex-wrap:wrap}.sv2-qc span{font:600 10.5px var(--font-body);border-radius:10px;padding:2px 7px;white-space:nowrap}',
 '.sv2-qc .q-c{background:#e6eef6;color:#2f5f8a}.sv2-qc .q-i{background:#e6f1e8;color:#2e7d46}.sv2-qc .q-n{background:var(--bg2,#f2f2f2);color:var(--text3,#888)}',
-'.sv2-submit{position:sticky;bottom:var(--sv2-bottom,8px);z-index:6;box-shadow:0 -2px 18px rgba(26,26,23,.10);display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px}',
+'.sv2-submit{position:sticky;bottom:var(--sv2-bottom,8px);z-index:6;box-shadow:0 -2px 18px rgba(26,26,23,.10);display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;background:#fff;border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px}',   /* solid: form text never shows through */
+'@media (min-width:701px){.sv2-submit .sv2-jdewarn{order:20;flex-basis:100%}}',   /* desktop: JDE warning on its own row, Save shipment no longer wraps */
 '.sv2-tot{display:grid}.sv2-tot .k{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2)}.sv2-tot .v{font:500 18px var(--font-mono);font-variant-numeric:tabular-nums}',
 '.sv2-ferr .sv2-banner{align-items:center}',
 '.sv2-lstat{display:grid;gap:6px;margin:0 0 8px}.sv2-lstat:empty{display:none}.sv2-lstat .sv2-banner{align-items:center}',
@@ -262,9 +267,10 @@ var CSS=[
 '  #sv2-vform .sv2-desk{display:none!important}#sv2-vform .sv2-lcards{display:grid}',
 '  .sv2-lcard .sv2-wgroup{grid-template-columns:repeat(2,minmax(0,1fr))}',
 '  .sv2-wgroup .sv2-dlab{white-space:normal;overflow-wrap:anywhere}',
-'  #sv2-vform.on{padding-bottom:calc(var(--sv2-footh,0px) + var(--sv2-bottom,8px) + 8px)}',   /* 2026-11-25 P3 (Pixel): room for the whole Save bar, incl. its offset above the phone nav */
-'  #sv2-vform input,#sv2-vform select{scroll-margin-bottom:calc(var(--sv2-footh,0px) + var(--sv2-bottom,8px) + 8px)}',
 '}',
+/* 2026-11-25 P3 (Pixel): room for the whole Save bar, incl. its offset above the phone nav. 2026-11-26: every width (was <=768px), so the sticky bar never covers the last heading/fields on desktop */
+'#sv2-vform.on{padding-bottom:calc(var(--sv2-footh,0px) + var(--sv2-bottom,8px) + 8px)}',
+'#sv2-vform input,#sv2-vform select{scroll-margin-bottom:calc(var(--sv2-footh,0px) + var(--sv2-bottom,8px) + 8px)}',
 /* r2 P2: touch layouts — tap targets >= 44px, inputs >= 16px (no iOS zoom-on-focus); this form only */
 '@media (max-width:768px),(pointer:coarse){',
 '  #sv2-vform .sv2-in,#sv2-vform .cin,#sv2-vform .csel{font-size:16px!important;min-height:44px}',   /* !important: index.html sets 14px!important at >=768px */
@@ -535,7 +541,7 @@ function createInstance(host,O){
    '<div class="sv2-view on" id="sv2-vlist">'+
     '<div class="sv2-banner" id="sv2-banner">'+bannerInner()+'</div>'+
     '<div class="sv2-toolbar">'+
-     '<div class="sv2-search" id="sv2-searchwrap"><input id="sv2-q" type="search" placeholder="'+(OC?'Search container, crop, client, station, variety, farm, grade…':PT?'Search container, client, station, variety, pivot, farm, lot, grade…':'Search container, client, vessel, booking, invoice, lot, port…')+'" autocomplete="off" aria-label="Search shipments"><button type="button" class="sv2-clr" data-act="clearQ" aria-label="Clear search">✕</button></div>'+
+     '<div class="sv2-search" id="sv2-searchwrap"><input id="sv2-q" type="search" placeholder="'+(OC?'Search container, crop, client, station, variety, farm, grade…':PT?'Search container, client, station, variety, pivot, farm, lot, grade…':'Search container, client, vessel…')+'" title="'+(OC?'Search container, crop, client, station, variety, farm, grade':PT?'Search container, client, station, variety, pivot, farm, lot, grade':'Search container, client, vessel, booking, invoice, lot, port')+'" autocomplete="off" aria-label="Search shipments"><button type="button" class="sv2-clr" data-act="clearQ" aria-label="Clear search">✕</button></div>'+
      '<span class="sv2-fsels" id="sv2-facets"></span>'+
      '<button type="button" class="sv2-reset" id="sv2-resetbtn" data-act="resetAll">Reset filters</button>'+
      '<span class="sv2-sp"></span>'+
@@ -866,10 +872,11 @@ function createInstance(host,O){
   }
 
   /* ---------------------------------------------------------- lines (desktop rows / phone cards) */
-  var INTAKE_CALC_TITLE={pascol_pct:'Container Pascol weight (t) × line cartons ÷ Total cartons (read-only; the container value is entered once under Container)',packing_weight:'Cartons × Packing Net Weight (t per carton)',
+  var INTAKE_CALC_TITLE={pascol_pct:'Container Pascol weight (t) × line cartons ÷ Total cartons (read-only; the container value is entered once under Container)',packing_weight:'Cartons × Packaging per carton (t)',
     pascol_net:'Pascol share (t) − Packing weight (t)',weight_variance:'Pascol Net (t) − Net t'};
   /* r2 P1: tonne placeholders on the carton weights */
-  var PH={carton_net_weight:'0.015',carton_gross_weight:'0.0165',packing_factor:'0.0011'};   /* DB v0.4: Packing Net Weight placeholder */
+  var PH={carton_net_weight:'e.g. 0.015',carton_gross_weight:'e.g. 0.0165',packing_factor:'e.g. 0.0011'};   /* DB v0.4: Packing Net Weight placeholder; 2026-11-26: 'e.g.' so it never reads as a value */
+  var PACK_BLANK_HINT='type it — Packing t stays blank until then';
   /* r2 P2: required marker (new orchard lines need variety, pallets, cartons, carton net: REQ_LINE) */
   function rq(){return PT?'':' <span class="req" title="Required on new lines">*</span>';}
   /* r2 P1: plain inline warning under a carton weight; painted by paintWarns, no data-k (never saved) */
@@ -896,19 +903,19 @@ function createInstance(host,O){
       '<div class="sv2-wgh">Weights (tonnes) <small>· Net t = cartons × carton net t</small></div>'+
       g('Carton net t'+rq(),cin(d.carton_net_weight,'carton_net_weight','num')+wmsg(i,'carton_net_weight'))+
       g('Carton gross t',cin(d.carton_gross_weight,'carton_gross_weight','num')+cgwRawHint(d)+wmsg(i,'carton_gross_weight'))+
-      (INTAKE&&isCitrus()?g('Packing Net Weight (t per carton)',cin(d.packing_factor,'packing_factor','num')+wmsg(i,'packing_factor')):'')+
+      (INTAKE&&isCitrus()?g('Packaging per carton (t)',cin(d.packing_factor,'packing_factor','num')+wmsg(i,'packing_factor')):'')+
       g(old?'Computed net t · hint':'Net t · auto',hintIn('cnet',i,old?'Cartons × carton net t. A hint only: the stored Net t is not changed':'Cartons × carton net t'))+
       g(old?'Computed gross t · hint':'Gross t · auto',hintIn('cgrs',i,old?'Cartons × carton gross t. A hint only: the stored Gross t is not changed':'Cartons × carton gross t'))+
     '</div>';
   }
-  function csel(list,v,k,chg){return '<select class="csel" dir="auto" data-k="'+k+'"'+(chg?' data-chg="'+chg+'"':'')+'>'+opts(list,v)+'</select>';}
+  function csel(list,v,k,chg){return '<select class="csel" dir="auto" data-k="'+k+'"'+(chg?' data-chg="'+chg+'"':'')+(k==='carton_type'&&v?' title="'+esc(v)+'"':'')+'>'+opts(list,v)+'</select>';}   /* title: full carton type when the select is cut (selects never carry a validation title) */
   /* 2026-11-17 layout (mock-up "Shipments Form Layout"): main row = what's on the packing list; the panel under it has
      Classification / Weight inputs / Results. Every tonne input shows its kg value underneath (data-echo). */
   var ECHO_KEYS={carton_net_weight:1,carton_gross_weight:1,packing_factor:1};
   function kgText(v){var n=intakeNum(v);if(n===null)return '';return '= '+(n*1000).toLocaleString('en-US',{maximumFractionDigits:2})+' kg';}
   function echo(k){return '<div class="sv2-echo" data-echo="'+k+'"></div>';}
   function catSel(d){return csel(catNames(),d.category,'category','cat').replace('class="csel"','class="csel sv2-cat" aria-label="Category"').replace('<option value=""></option>','<option value="">Category…</option>');}
-  function packedAt(d){return '<select class="csel" dir="auto" data-k="pack_house" aria-label="Packed at">'+opts(REF.packs,d.pack_house).replace('<option value=""></option>','<option value="">Same as loaded at</option>')+'</select>';}
+  function packedAt(d){return '<select class="csel" dir="auto" data-k="pack_house" aria-label="Packed at" title="'+esc(d.pack_house||'Same as loaded at')+'">'+opts(REF.packs,d.pack_house).replace('<option value=""></option>','<option value="">Same as loaded at</option>')+'</select>';}
   function classFields(d,g){var cit=isCitrus();
     return (hasLot()?g('Lot #',cin(d.lot,'lot','mono')):'')+g('Daltex class',cin(d.daltex_class,'daltex_class'))+g('Client class',cin(d.client_class,'client_class'))+
       g('Brand',cin(d.brand,'brand'))+g('Packing',cin(d.packaging_type,'packaging_type'))+(cit?g('Caliber',cin(d.caliber,'caliber','mono')):'')+
@@ -918,7 +925,7 @@ function createInstance(host,O){
   function weightFields(d,i,g,withNet){var cit=isCitrus(),old=!!d.id;
     return (withNet?g('Carton net'+u('t')+rq(),cin(d.carton_net_weight,'carton_net_weight','num')+echo('carton_net_weight')+wmsg(i,'carton_net_weight')):'')+
       g('Carton gross'+u('t'),cin(d.carton_gross_weight,'carton_gross_weight','num')+echo('carton_gross_weight')+cgwRawHint(d)+wmsg(i,'carton_gross_weight'))+
-      (INTAKE&&cit?g('Packaging per carton'+u('t'),cin(d.packing_factor,'packing_factor','num')+echo('packing_factor')+wmsg(i,'packing_factor')):'')+
+      (INTAKE&&cit?g('Packaging per carton'+u('(t)'),cin(d.packing_factor,'packing_factor','num')+echo('packing_factor')+wmsg(i,'packing_factor')):'')+
       (cit&&!INTAKE?g('Pascol weight'+u('t')+' · weighbridge',cin(d.pascol_weight,'pascol_weight','num'))+g('Packing weight'+u('t'),cin(d.packing_weight,'packing_weight','num')):'')+
       (old?g('Computed net'+u('t')+' · hint',hintIn('cnet',i,'Cartons × carton net t. A hint only: the stored Net t is not changed'))+
            g('Computed gross'+u('t')+' · hint',hintIn('cgrs',i,'Cartons × carton gross t. A hint only: the stored Gross t is not changed')):'');}
@@ -1113,7 +1120,8 @@ function createInstance(host,O){
     set('slines',LINES.length);set('spal',pal.toLocaleString());
     html('snet',net.toFixed(3)+' <small>· '+grs.toFixed(3)+'</small>');
     /* kg echo under every tonne input (lines + header) */
-    LINES.forEach(function(d,i){Object.keys(ECHO_KEYS).forEach(function(k){qa('[data-line="'+i+'"] [data-echo="'+k+'"]').forEach(function(e){e.textContent=kgText(d[k]);});});});
+    LINES.forEach(function(d,i){Object.keys(ECHO_KEYS).forEach(function(k){qa('[data-line="'+i+'"] [data-echo="'+k+'"]').forEach(function(e){var tx=kgText(d[k]),hint=!tx&&k==='packing_factor'&&INTAKE;   /* 2026-11-26: blank packaging per carton says why Packing t is empty (same reserved line) */
+      e.textContent=hint?PACK_BLANK_HINT:tx;e.classList.toggle('hint',hint);e.title=hint?PACK_BLANK_HINT:'';});});});
     if(INTAKE){var tc=val('tcartons'),tcN=intakeNum(tc,1),match=tcN!==null&&tcN>0&&ctn===tcN;
       html('sctn',ctn.toLocaleString()+(tcN?' <small>/ '+tcN.toLocaleString()+'</small>':''));
       var cw=el('sctn-w');if(cw)cw.classList.toggle('warn',!!tcN&&!match);
@@ -1121,13 +1129,13 @@ function createInstance(host,O){
       var he=el('hpecho');if(he&&!(el('hpascol')&&el('hpascol').classList.contains('invalid'))){he.className='sv2-echo';he.textContent=kgText(val('hpascol'));}
       LINES.forEach(function(d,i){var s=intakeShareRaw(d.carton_count,tc),v=s===null?'':(Math.round(s*1000)/10).toFixed(1)+' %';qa('[data-cpct="'+i+'"]').forEach(function(f){f.value=v;});
         /* Pascol share / net / variance only firm up once the lines cover every carton */
-        qa('[data-pend="'+i+'"]').forEach(function(pe){pe.hidden=match;pe.textContent=match?'':(tcN?'Pending: lines cover '+ctn.toLocaleString()+' of '+tcN.toLocaleString()+' cartons. These firm up when they match.':'Pending: enter Total cartons to split the Pascol weight.');});
+        qa('[data-pend="'+i+'"]').forEach(function(pe){pe.hidden=false;pe.classList.toggle('ok',match);pe.textContent=match?'All '+tcN.toLocaleString()+' cartons covered.':(tcN?'Pending: lines cover '+ctn.toLocaleString()+' of '+tcN.toLocaleString()+' cartons. These firm up when they match.':'Pending: enter Total cartons to split the Pascol weight.');});
         qa('[data-rgrid="'+i+'"]').forEach(function(rg){rg.classList.toggle('pending',!match);});});
       if(isCitrus()){var hp=intakeNum(val('hpascol')),pk=0;LINES.forEach(function(d){pk+=numOf(d.packing_weight);});
         html('spas',(hp===null?'—':hp.toFixed(3))+' <small>· '+pk.toFixed(3)+'</small>');
         var vr=hp!==null&&match?hp-pk-net:null;
         html('svar',vr===null?'<small>Pending</small>':(vr>=0?'+':'')+vr.toFixed(3)+(hp>0?' <small>'+(vr/hp*100).toFixed(1)+' %</small>':''));}
-      var fw=el('ctnwarn');if(fw){var r=intakeCartonFooter(ctn,tc),show=r.kind!=='ok'&&!(r.kind==='missing'&&ctn===0&&!TRIED);fw.classList.toggle('on',show);fw.textContent=show?r.message:'';fw.title=fw.textContent;}
+      var fw=el('ctnwarn');if(fw){var r=intakeCartonFooter(ctn,tc),ok=r.kind==='ok',show=ok||!(r.kind==='missing'&&ctn===0&&!TRIED);fw.classList.toggle('on',show);fw.classList.toggle('ok',ok);fw.textContent=ok?'Line cartons match Total cartons ('+ctn.toLocaleString()+')':show?r.message:'';fw.title=fw.textContent;}   /* 2026-11-26: stays visible (green) once they match, so the bar does not jump */
     }
     else {html('sctn',ctn.toLocaleString());
       LINES.forEach(function(d,i){var n=numOf(d.net_weight),v=net>0&&String(d.net_weight||'').trim()?(Math.round(n/net*1000)/10).toFixed(1)+' %':'';qa('[data-cpct="'+i+'"]').forEach(function(f){f.value=v;});});}
@@ -1595,7 +1603,7 @@ function createInstance(host,O){
   }
   var GET={ref:function(c){return c.ref;},client:function(c){return c.hdr.client||'';},region:function(c){return c.hdr.region||'';},
     loaded:function(c){return c._t;},lines:function(c){return c.lines.length;},pal:function(c){return c._pal;},ctn:function(c){return c._ctn;},
-    net:function(c){return c._net;},grs:function(c){return c._grs;},vr:function(c){return c._pending?-Infinity:c._vr;},status:function(c){return c.hdr.status||'';},
+    net:function(c){return c._net;},grs:function(c){return c._grs;},vr:function(c){return c._pending||c._vr===null?-Infinity:c._vr;},status:function(c){return c.hdr.status||'';},
     station:function(c){return OC?c.hdr.stationL||'':c.hdr.station||'';},pkg:function(c){return c._ctn;},crop:function(c){return c.hdr.cropL||'';}};
   if(OC)GET.client=function(c){return c.hdr.clientL||'';};
   var TEXTSORT={ref:1,client:1,region:1,status:1,station:1,crop:1};
@@ -1603,7 +1611,10 @@ function createInstance(host,O){
     c._pal=sum(c.lines,'pal');c._ctn=sum(c.lines,'ctn');c._net=sum(c.lines,'net');c._grs=sum(c.lines,'grs');
     c._cls=uniq(c.lines.map(function(l){return l.cc;}));c._pack=uniq(c.lines.map(function(l){return packShort(l.pk);}));
     c._t=+new Date(c.hdr.loaded+'T00:00');
-    c._pending=c.lines.every(function(l){return l.pas==='—'||l.pas==null||l.pas==='';});c._vr=sum(c.lines,'vr');
+    c._pending=c.lines.every(function(l){return l.pas==='—'||l.pas==null||l.pas==='';});
+    /* 2026-11-26: stored line variance, else line Pascol net − Net; a line with neither = not stored (null → '—', never a green 0.00) */
+    var lvr=c.lines.map(function(l){var has=function(x){return x!=null&&String(x).trim()!==''&&isFinite(+x);};return has(l.vr)?+l.vr:has(l.pasnet)&&has(l.net)?(+l.pasnet)-(+l.net):null;});
+    c._vr=lvr.some(function(x){return x===null;})?null:lvr.reduce(function(t,x){return t+x;},0);
     if(OC){c.hdr.cropL=ocLabel(c.hdr.crop,'crop');c.hdr.stationL=ocLabel(c.hdr.station,'packing_station');c.hdr.clientL=ocLabel(c.hdr.client,'client');
       c.hdr.portL=ocLabel(c.hdr.port,'port');c.hdr.vesselL=ocLabel(c.hdr.vessel,'transport');
       c.lines.forEach(function(l){l.farmL=ocLabel(l.farm,'farm');l.ptL=ocLabel(l.pt,'packing_type');});}
@@ -1689,7 +1700,7 @@ function createInstance(host,O){
       '<div><b>'+hl(l.v||'—')+'</b> · '+hl(PT?(l.grade||''):(l.cc||''))+'</div>'+
       '<div class="sv2-sub">'+(l.pal==null?'—':l.pal)+' plt · '+(l.ctn==null?'—':Number(l.ctn).toLocaleString())+(PT?' packs':' ctn')+' · '+fmtT(l.net)+' t</div></div>';
   }
-  function weighChip(c){if(c._pending)return '<span class="sv2-w pend">Pending</span>';var ok=Math.abs(c._vr)<=0.5;return '<span class="sv2-w '+(ok?'ok':'off')+'">'+(c._vr>0?'+':'')+fmtT(c._vr)+' t</span>';}
+  function weighChip(c){if(c._pending)return '<span class="sv2-w pend">Pending</span>';if(c._vr===null)return '<span class="sv2-w pend" title="Variance not stored for this shipment">—</span>';var ok=Math.abs(c._vr)<=0.5;return '<span class="sv2-w '+(ok?'ok':'off')+'">'+(c._vr>0?'+':'')+fmtT(c._vr)+' t</span>';}
   function rowHTML(c){
     var i=DATA.indexOf(c);
     if(OC)return '<tr tabindex="0" data-act="open" data-i="'+i+'">'+
@@ -1889,6 +1900,7 @@ function createInstance(host,O){
     else if(!INTAKE&&isCitrus()&&t.getAttribute&&t.getAttribute('data-k')==='pascol_weight'&&String(t.value).trim()){var me=t.closest('[data-line]');
       qa('[data-line] [data-k="pascol_weight"]').forEach(function(f){if(f!==t&&f.closest('[data-line]')!==me&&!String(f.value).trim())f.value=t.value;});recompute();}
     else if(c==='cat'){var line=t.closest('[data-line]');if(line){var i=+line.getAttribute('data-line');syncLines();LINES[i].variety='';renderLines();}}
+    if(t.tagName==='SELECT'&&/^(carton_type|pack_house)$/.test(t.getAttribute('data-k')||''))t.title=t.selectedIndex>=0?t.options[t.selectedIndex].text:'';   /* tooltip follows the shown value */
     if(el('vform').classList.contains('on')&&t.closest('#sv2-vform'))setDirty(true);
   }
   function onInput(e){
