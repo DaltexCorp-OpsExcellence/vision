@@ -37,6 +37,12 @@ function salesRegionFlag(){return window.SV2_SALES_REGION_ENABLED===true&&window
 /* Saving is ON on staging (OC_WRITES=true, Tarek 2026-11-23 21:30) because the OC DB package is applied. If OC_WRITES is set
    back to false, Save, Save & new, Delete and the list editor only show OC_PENDING. Not a runtime switch. */
 var OC_WRITES=true;
+/* 2026-11-26 (Tarek): Potatoes + Other crops form v2 — Shipment type Container/Vessel (+ Truck No.), Pascol Wt t in the header,
+   Invoice No. required; lines: Farm type > Farm name > Pivot (no pivot for Supplier), Packaging type, No. of packages (عدد),
+   Package wt t (one package), Std wt t = packages x package wt (auto); summary Pascol vs Std variance. index.html
+   SV2_PIVOT_FORM_V2 decides (staging VISION_IS_DEV). Saves send form_v '2' (DB sv2_pivot_form_v2_20261126). */
+function pivotFormV2(){return window.SV2_PIVOT_FORM_V2===true;}
+var PV2_FARM_TYPES=['Daltex Farms','Supplier','Purchase'];
 var OC_PENDING='Preview: saving turns on after the database step';   /* v0.2 P3 (Pixel): neutral wording, not an error */
 function otherCropsEnabled(){
   /* v0.2 (Ash): ON only when index.html's config says so AND this is the staging host (VISION_IS_DEV, set in index.html from
@@ -163,6 +169,17 @@ var CSS=[
 '.sv2-dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 10px;padding:4px 0}',
 '.sv2-dlab{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:3px}',
 /* 2026-11-17 layout (mock-up): line panel = Classification / Weight inputs / Results */
+'.sv2-pv2 table.sv2-lines>tbody>tr>td{vertical-align:top}.sv2-pv2 [data-pecho]{min-height:14px}',
+'.sv2c-w{position:relative;display:block;min-width:0}.sv2c-w>select{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}',
+'.sv2c-in,.sv2c-dl{background-image:url(\"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 12 12%27%3E%3Cpath d=%27M2.5 4.5 6 8l3.5-3.5%27 fill=%27none%27 stroke=%27%23667%27 stroke-width=%271.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E\")!important;background-repeat:no-repeat!important;background-position:right 8px center!important;background-size:12px 12px!important;padding-right:26px!important;text-overflow:ellipsis}',
+'.sv2c-in{cursor:text;width:100%}.sv2c-in:disabled,.sv2c-dl:disabled{background-image:none!important}',
+'.sv2c-pop{position:fixed;z-index:2147482000;background:#fff;border:1px solid var(--border2,#ccd);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:320px;min-width:220px;font:13px var(--font-body,inherit);color:var(--text,#222)}',
+'.sv2c-pop.on{display:flex}.sv2c-opts{overflow:auto;padding:4px 0;flex:1 1 auto;min-height:0}',
+'.sv2c-opt{padding:7px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sv2c-opt[aria-selected="true"],.sv2c-opt:hover{background:var(--green-bg,#e9f3ec)}.sv2c-opt.cur{font-weight:600}',
+'.sv2c-empty{padding:8px 12px;color:var(--text3,#777)}.sv2c-foot{border-top:1px solid var(--bg2,#eee);padding:6px 8px;display:grid;gap:4px;flex:0 0 auto}.sv2c-foot:empty{display:none}',
+'.sv2c-act{font:500 12.5px var(--font-body,inherit);text-align:left;background:none;border:none;color:var(--accent,#1c5c3c);cursor:pointer;padding:5px 4px;border-radius:6px;min-height:32px}.sv2c-act:hover,.sv2c-act:focus-visible{background:var(--bg2,#f2f2f2);outline:none}',
+'.sv2c-hint{font-size:11.5px;color:var(--text3,#777);padding:0 4px;line-height:1.4}',
+'.sv2-seg{display:flex;border:1px solid var(--border2,#ccd);border-radius:8px;overflow:hidden;min-height:36px}.sv2-seg button{flex:1;border:0;background:var(--card,#fff);color:var(--text,#222);font:500 13px var(--font-body,inherit);cursor:pointer;padding:0 8px}.sv2-seg button.on{background:var(--accent,#1c5c3c);color:#fff;font-weight:600}.sv2-seg button:disabled{cursor:default;opacity:.75}.sv2-seg button:focus-visible{outline:2px solid var(--accent,#1c5c3c);outline-offset:-2px}',
 '.sv2-u{text-transform:none;letter-spacing:0;font-family:var(--font-mono);font-weight:400;color:var(--text2)}.sv2-echo{font:11px var(--font-mono);color:var(--text2);margin-top:2px;text-align:right;min-height:14px}.sv2-echo.warn{color:#7a4a10}.sv2-echo.hint{font-family:var(--font-body);color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sv2-echo.ok{color:var(--green)}.sv2-auto{font:500 9px var(--font-mono);color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;margin-left:5px;text-transform:none;letter-spacing:0;vertical-align:1px}.sv2-panel{display:grid;grid-template-columns:2.1fr 1fr 1.5fr;gap:10px;padding:6px 0 10px}.sv2-blk{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:grid;gap:8px;align-content:start;min-width:0}.sv2-bt{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}.sv2-bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px 10px}.sv2-bgrid .s2{grid-column:span 2}.sv2-rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}.sv2-pend{grid-column:1/-1;font-size:12px;color:#6e4a0e;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 9px}.sv2-pend[hidden]{display:none}.sv2-rgrid.pending .cin.calc{color:var(--text3)}.sv2-cat{font-size:11px!important;min-height:0!important;padding:1px 4px!important;margin-bottom:3px;color:var(--text2);border-color:var(--border)!important}.sv2 .rm{opacity:.75}.sv2-goprob{font:500 13px var(--font-body);color:var(--red);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}.sv2-goprob[hidden]{display:none}.sv2-tot .v small{font-size:13px;color:var(--text2)}.sv2-tot.warn .v,.sv2-tot.warn .v small{color:#7a4a10}.sv2-undo{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a17;color:#f0ede6;font:13px var(--font-body,sans-serif);padding:8px 10px 8px 16px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:91;display:flex;gap:12px;align-items:center}.sv2-undo button{font:600 13px var(--font-body,sans-serif);background:none;border:1px solid #6a8068;color:#c8e6cf;border-radius:6px;padding:4px 10px;cursor:pointer}@media (max-width:1100px){.sv2-panel{grid-template-columns:1fr 1fr}.sv2-panel .sv2-blk:first-child{grid-column:1/-1}}',
 '.sv2-cgwraw{font-size:10.5px;color:var(--text3);margin-top:2px}',
 '.sv2-ib{border:1px solid var(--border);background:var(--card);border-radius:5px;cursor:pointer;color:var(--text3);font-size:13px;line-height:1;padding:3px 7px}',
@@ -376,7 +393,7 @@ function ptListsFrom(m){if(!m)return PT_LISTS;var out={},k;for(k in PT_LISTS)out
 /* Other crops line = the potato line + Cartons # and Benz # (codes in farm / packaging) */
 function newLineOC(){var d=newLinePT();d.cartons_count='';d.benz_count='';return d;}
 /* whole-number fields (server: _shipments_v2_int) — everything else in NUMKEYS is a decimal. Other crops pallets are decimal (20.5). */
-var INTKEYS={pallet_count:1,carton_count:1,punnet_count:1,pallets:1,jumbo_count:1,sack_count:1,cartons_count:1,benz_count:1};
+var INTKEYS={package_count:1,pallet_count:1,carton_count:1,punnet_count:1,pallets:1,jumbo_count:1,sack_count:1,cartons_count:1,benz_count:1};
 /* same rule as the server (_shipments_v2_num/_int): null = OK or empty, else a short reason */
 function numProblem(v,whole){
   var s=asciiDigits(v).trim();if(!s)return null;
@@ -391,7 +408,7 @@ function numProblem(v,whole){
 function tidyNum(v){var s=String(v);if(!/^-?\d+(\.\d+)?$/.test(s))return s;
   var n=Number(s),r=Number(n.toFixed(6));   /* float noise from sheet maths (13.216000000000001) → 13.216; real decimals kept */
   return String(Math.abs(n-r)<1e-9?r:n);}
-var NUMKEYS={pallets:'numeric',jumbo_count:'numeric',sack_count:'numeric',cartons_count:'numeric',benz_count:'numeric',standard_weight:'decimal',package_weight:'decimal',pack_size:'decimal',pallet_count:'numeric',carton_count:'numeric',net_weight:'decimal',gross_weight:'decimal',carton_net_weight:'decimal',carton_gross_weight:'decimal',pascol_weight:'decimal',pascol_pct:'decimal',packing_weight:'decimal',packing_factor:'decimal',pascol_net:'decimal',weight_variance:'decimal'};
+var NUMKEYS={package_count:'numeric',pallets:'numeric',jumbo_count:'numeric',sack_count:'numeric',cartons_count:'numeric',benz_count:'numeric',standard_weight:'decimal',package_weight:'decimal',pack_size:'decimal',pallet_count:'numeric',carton_count:'numeric',net_weight:'decimal',gross_weight:'decimal',carton_net_weight:'decimal',carton_gross_weight:'decimal',pascol_weight:'decimal',pascol_pct:'decimal',packing_weight:'decimal',packing_factor:'decimal',pascol_net:'decimal',weight_variance:'decimal'};
 
 /* ---------------------------------------------------------------- intake maths (all weights in tonnes, never ÷1000)
    Strings in, strings out ('' = blank), same 6-decimal tidy as calcPascol. Invalid numbers count as blank here
@@ -484,7 +501,8 @@ function createInstance(host,O){
   function hasLot(){return PRODUCT!=='grapes';}   /* Tarek 2026-10-13: Lot # everywhere except Grapes */
   var OC=(PRODUCT==='other_crops');        /* Other crops: the Pivots form + Crop, Cartons #, Benz #; lists are ref_options codes */
   var PT=(PRODUCT==='potatoes')||OC;       /* Pivots line: own fields, totals and RPCs; everything else shared */
-  var PTM=PT&&!OC&&ptListsEnabled();      /* Potatoes managed lists (staging only); off = PT_LISTS as before */
+  var PTM=PT&&!OC&&ptListsEnabled();
+  var PV2=PT&&pivotFormV2();             /* Potatoes + Other crops form v2 (staging switch) */      /* Potatoes managed lists (staging only); off = PT_LISTS as before */
   if(OC&&!otherCropsEnabled()){   /* flag off: never mount the form */
     host.innerHTML='<div class="sv2"><div class="sv2-banner err"><span aria-hidden="true">!</span><span>Other crops isn\u2019t switched on yet.</span></div></div>';
     var offApi={isDirty:function(){return false;},confirmLeave:function(){return true;},unmount:function(){host.innerHTML='';if(CUR&&CUR.api===offApi)CUR=null;}};
@@ -492,7 +510,7 @@ function createInstance(host,O){
   }
   /* new-column intake fields (planned date, total cartons, header pascol, packing factor). Read once at mount. Never potatoes. */
   var INTAKE=!PT&&intakeFieldsEnabled();
-  function blankLine(){return OC?newLineOC():PT?newLinePT():newLine();}
+  function blankLine(){var d=OC?newLineOC():PT?newLinePT():newLine();if(PV2){d.farm_type='';d.package_count='';}return d;}
   function snapNote(){return SNAPSHOT_PRODUCTS[PRODUCT]?SNAPSHOT_NOTE:'';}
   function bannerInner(){
     if(OC&&!OC_WRITES)return '<span aria-hidden="true">✎</span><span>'+OC_PENDING+'.</span>';
@@ -537,7 +555,7 @@ function createInstance(host,O){
 
   /* ---------------------------------------------------------- markup */
   host.innerHTML=
-  '<div class="sv2'+(OC?' sv2-oc':'')+(RO?' sv2-ro':'')+'">'+
+  '<div class="sv2'+(OC?' sv2-oc':'')+(PV2?' sv2-pv2':'')+(RO?' sv2-ro':'')+'">'+
    '<div class="sv2-view on" id="sv2-vlist">'+
     '<div class="sv2-banner" id="sv2-banner">'+bannerInner()+'</div>'+
     '<div class="sv2-toolbar">'+
@@ -574,7 +592,7 @@ function createInstance(host,O){
     '<div id="sv2-lstat" class="sv2-lstat" aria-live="polite"></div>'+   /* 2026-11-25: list loading / "Couldn’t load list" + Retry (never cleared by form errors) */
     '<div class="sv2-box">'+
      '<div class="sv2-overlay" id="sv2-overlay"><span class="sv2-spin"></span>Loading container…</div>'+
-     (OC?ocHeaderHTML():PT?ptHeaderHTML():orHeaderHTML())+
+     (PV2?pv2HeaderHTML():OC?ocHeaderHTML():PT?ptHeaderHTML():orHeaderHTML())+
     '</div>'+
     '<div class="sv2-box">'+
      '<div class="sv2-st" id="sv2-lhint">'+esc(PRODUCT_NAME)+' lines <small>· at least one line'+(PT?'':' · <span class="req">*</span> required')+'</small></div>'+
@@ -583,9 +601,9 @@ function createInstance(host,O){
      '<div class="sv2-toolbar"><button type="button" class="sv2-btn sec sm" data-act="addLine">+ Add line</button><button type="button" class="sv2-btn sec sm" data-act="dupLast">'+(PT?'Duplicate last line':'Duplicate line (same pack)')+'</button></div>'+
     '</div>'+
     '<div class="sv2-submit">'+
-     '<div class="sv2-totrow'+(isCitrus()?' wrap':'')+'">'+tot('Lines','slines')+tot('Pallets','spal')+   /* 2026-11-25 P3: every product (phones: one scrollable line) */
-     (OC?tot('Packs','spacks')+tot('Std weight','snet'):PT?tot('Jumbo bags','sjumbo')+tot('Sacks','ssack')+tot('Standard wt','snet')+tot('Pascol wt','spas')
-        :tot('Cartons','sctn')+tot('Net · Gross'+u('t'),'snet')+(INTAKE&&isCitrus()?tot('<span class="sv2-kp">Pascol · Packing</span><span class="sv2-kn">Pascol</span>'+u('t'),'spas')+tot('<span class="sv2-kl">Container variance</span><span class="sv2-ks">Variance</span>'+u('t'),'svar'):''))+'</div>'+
+     '<div class="sv2-totrow'+(isCitrus()||PV2?' wrap':'')+'">'+tot('Lines','slines')+(PV2?tot('Packages','spacks')+tot('Std wt'+u('t'),'snet')+tot('Pascol Wt'+u('t'),'spas')+tot('Variance'+u('t'),'svar')+tot('Variance %','svarp'):tot('Pallets','spal')+   /* 2026-11-25 P3: every product (phones: one scrollable line) */
+     (PV2?'':OC?tot('Packs','spacks')+tot('Std weight','snet'):PT?tot('Jumbo bags','sjumbo')+tot('Sacks','ssack')+tot('Standard wt','snet')+tot('Pascol wt','spas')
+        :tot('Cartons','sctn')+tot('Net · Gross'+u('t'),'snet')+(INTAKE&&isCitrus()?tot('<span class="sv2-kp">Pascol · Packing</span><span class="sv2-kn">Pascol</span>'+u('t'),'spas')+tot('<span class="sv2-kl">Container variance</span><span class="sv2-ks">Variance</span>'+u('t'),'svar'):'')))+'</div>'+
      '<span class="sv2-sp"></span><span class="sv2-jdewarn" id="sv2-jdewarn" role="status" hidden></span><button type="button" class="sv2-goprob" data-act="goProblem" id="sv2-goprob" hidden></button>'+
      (PT?'':'<button type="button" class="sv2-btn sec" data-act="saveNew">Save &amp; new</button>')+
      '<button type="button" class="sv2-btn" data-act="save">Save shipment</button>'+
@@ -674,7 +692,51 @@ function createInstance(host,O){
      '</div>'+
      '<datalist id="sv2-dl-country"></datalist><datalist id="sv2-dl-pivot"></datalist><datalist id="sv2-dl-variety"></datalist>';
   }
-  function tot(k,id){return '<div class="sv2-tot" id="sv2-'+id+'-w"><span class="k">'+k+'</span><span class="v" id="sv2-'+id+'">0</span></div>';}
+  /* 2026-11-26 form v2 header (Potatoes + Other crops): Shipment type picks Container No. or Vessel Name; Truck No.;
+     Pascol Wt t for the whole shipment; Invoice No. required. Same ids as before so load/save/lists keep working. */
+  function pv2HeaderHTML(){
+    var V=OC?selO(ar('Vessel Name','اسم المركب')+' <span class="req">*</span>','vessel',{cls:'oc-full'})
+            :fld(ar('Vessel Name','اسم المركب')+' <span class="req">*</span>','vessel');
+    return ''+
+     '<div class="sv2-st">Voyage <small id="sv2-lockhint" hidden>· shipment reference + date locked while editing</small></div>'+
+     '<div class="sv2-grid'+(OC?' sv2-ocg':'')+'">'+
+      (OC?selO(ar('Crop','المحصول'),'crop',{req:1,cls:'oc-full'}):'')+
+      fld(ar('Loading Date','التاريخ'),'ldate','date',{req:1,chg:'ldate'})+
+      (OC?selO(ar('Packing Station','محطه التعبئه'),'station',{cls:'oc-full'})+selO(ar('Sector','القطاع'),'sector')+selO(ar('Crop season','الموسم'),'pseason')
+         :sel(ar('Packing Station','محطه التعبئه'),'station')+sel(ar('Sector','القطاع'),'sector')+sel(ar('Crop season','الموسم'),'pseason'))+
+      '<div class="sv2-f"><label>'+ar('Shipment type','نوع الشحن')+' <span class="req">*</span></label><div class="sv2-seg" role="group" aria-label="Shipment type">'+
+        '<button type="button" class="on" data-act="tmode" data-v="container" aria-pressed="true">'+ar('Container','حاويه')+'</button>'+
+        '<button type="button" data-act="tmode" data-v="vessel" aria-pressed="false">'+ar('Vessel','مركب')+'</button></div>'+
+        '<input type="hidden" id="sv2-tmode" value="container"></div>'+
+      '<div id="sv2-cwrap">'+fld(ar('Container No.','رقم الحاويه'),'container','text',{req:1,mono:1,ph:'e.g. MNBU 9188741'})+'</div>'+
+      '<div id="sv2-vwrap" hidden>'+V+'</div>'+
+      fld(ar('Truck No.','رقم العربيه')+' <span class="req" id="sv2-truckreq" hidden>*</span>','truck','text',{mono:1,ph:'truck number'})+
+      fld(ar('Pascol Wt t','وزن الباسكول'),'ppascol','text',{mono:1,num:1,inputmode:'decimal',ph:'whole shipment, t',after:'<div class="sv2-echo" id="sv2-ppecho"></div>'})+
+      fld(ar('Carta','كارته شحن'),'carta','text',{mono:1})+fld(ar('Container Count','عدد الحاويات'),'ccount','text',{mono:1,inputmode:'numeric'})+
+     '</div>'+
+     '<div class="sv2-derived">Auto · Month <b id="sv2-dmonth">—</b> · Week <b id="sv2-dweek">—</b></div>'+
+     '<div class="sv2-st">Destination &amp; documents</div>'+
+     '<div class="sv2-grid'+(OC?' sv2-ocg':'')+'">'+
+      (OC?selO(ar('Client','العميل'),'client',{cls:'oc-full'}):fld(ar('Client','العميل'),'client','text',{list:'sv2-dl-client'}))+
+      fld(ar('Country','الدولة'),'country','text',{list:'sv2-dl-country'})+fld(ar('Country 2','الدوله 2'),'country2','text',{list:'sv2-dl-country'})+
+      (OC?selO(ar('Shipping Port','ميناء الشحن'),'port',{cls:'oc-full'}):fld(ar('Shipping Port','ميناء الشحن'),'port','text',{list:'sv2-dl-port'}))+
+      fld(ar('Invoice No.','رقم الفاتوره'),'invoice','text',{mono:1,req:1})+fld(ar('Permit No.','رقم الاذن'),'permit','text',{mono:1})+
+      fld(ar('Work Order','امر الشغل'),'workorder','text',{mono:1})+
+     '</div>'+
+     '<datalist id="sv2-dl-client"></datalist><datalist id="sv2-dl-country"></datalist><datalist id="sv2-dl-port"></datalist>'+
+     '<datalist id="sv2-dl-pivot"></datalist><datalist id="sv2-dl-farm"></datalist><datalist id="sv2-dl-variety"></datalist><datalist id="sv2-dl-colour"></datalist>';
+  }
+  function pv2Mode(){var e=el('tmode');return e&&e.value==='vessel'?'vessel':'container';}
+  function setTmode(m){if(!PV2)return;m=m==='vessel'?'vessel':'container';var e=el('tmode');if(e)e.value=m;
+    qa('[data-act="tmode"]').forEach(function(b){var on=b.getAttribute('data-v')===m;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+    var cw=el('cwrap'),vw=el('vwrap'),tr=el('truckreq');if(cw)cw.hidden=m==='vessel';if(vw)vw.hidden=m!=='vessel';if(tr)tr.hidden=m!=='vessel';}
+  /* vessel shipments: the stored reference (container_number) is 'Vessel / Truck No.' */
+  function vesselRef(){var v=el('vessel'),t=val('truck').trim(),n='';
+    if(v)n=v.tagName==='SELECT'?(v.selectedIndex>0?String(v.options[v.selectedIndex].text||'').trim():''):String(v.value||'').trim();
+    return n&&t?n+' / '+t:'';}
+  function pv2Lock(on){if(!PV2)return;var m=pv2Mode();qa('[data-act="tmode"]').forEach(function(b){b.disabled=on;});
+    var t=el('truck');if(t)t.readOnly=on&&m==='vessel';var v=el('vessel');if(v){if(v.tagName==='SELECT')v.disabled=on&&m==='vessel';else v.readOnly=on&&m==='vessel';}}
+  function tot(k,id){return '<div class="sv2-tot\" id="sv2-'+id+'-w"><span class="k">'+k+'</span><span class="v" id="sv2-'+id+'">0</span></div>';}
   function u(x){return ' <span class="sv2-u">'+x+'</span>';}
   function autoTag(){return '<span class="sv2-auto">auto</span>';}
   /* JDE item code (citrus): Category, Variety, Client class, Caliber, Packing, Brand, Net/-- looked up in public.jde_codes,
@@ -1073,13 +1135,133 @@ function createInstance(host,O){
       '</div>'+
     '</div>';
   }
+  /* ---- 2026-11-26 form v2 lines (Potatoes + Other crops): Variety, Farm type > Farm name > Pivot, Grade, Packaging type,
+     No. of packages (عدد), Package wt t (one package), Std wt t = packages x package wt (auto). Details: lot, size 1 (mm),
+     size category, crop type, brand, operation, jumbo colour (type to search), sack colour. ---- */
+  function pv2Var(d){return OC?cin(d.variety,'variety','','sv2-dl-variety'):csel(varNames(),d.variety,'variety');}
+  function pv2Farm(d){return OC?ocSel('farm',d.farm,'farm'):cin(d.farm,'farm','','sv2-dl-farm');}
+  function pv2Pack(d,L){return OC?ocSel('packing_type',d.packaging,'packaging'):csel(L.packs,d.packaging,'packaging');}
+  function pv2Piv(d){var sup=d.farm_type==='Supplier';
+    return '<input class="cin" data-k="pivot" list="sv2-dl-pivot" dir="auto" value="'+esc(sup?'':d.pivot)+'"'+(sup?' disabled placeholder="no pivot" title="Suppliers have no pivot"':'')+'>';}
+  function pv2Std(d){return roIn(d.standard_weight,'standard_weight','No. of packages × Package wt (t)');}
+  function pv2Pw(d,i){return cin(d.package_weight,'package_weight','num')+'<div class="sv2-echo" data-pecho="'+i+'"></div>';}
+  function pv2Lists(){return OC?ocLists():ptLists();}
+  function pv2Detail(d,L){
+    return dl(ar('Lot No','رقم اللوط'),cin(d.lot,'lot','mono'))+dl(ar('Size 1 (mm)','الحجم1'),cin(d.size1,'size1','num'))+
+      dl(ar('Size category','الحجم2'),csel(L.size2,d.size2,'size2'))+dl(ar('Crop type','محصول'),csel(L.cropTypes,d.crop_type,'crop_type'))+
+      dl(ar('Brand','براند'),csel(L.brands,d.brand,'brand'))+dl(ar('Operation','نوع تشغيل'),csel(L.ops,d.op_type,'op_type'))+
+      dl(ar('Packaging colour','لون العبوة'),csel(L.colours,d.sack_colour,'sack_colour'));   /* 2026-11-26 (Tarek): one colour field for jumbo bags and sacks (same list), stored as before under Sack Colour */
+  }
+  function pv2HeadHTML(){return '<tr><th></th><th>#</th><th'+(OC?' class="oc-var"':'')+'>Variety</th><th>Farm type</th><th>Farm name</th><th>Pivot</th><th>Grade</th><th>Packaging type</th>'+
+    '<th class="num">No. of packages <span class="sv2-ar" lang="ar">عدد</span></th><th class="num">Package wt t</th><th class="num">Std wt t</th><th></th></tr>';}
+  function pv2RowHTML(d,i){
+    var L=pv2Lists();
+    return '<tr data-line="'+i+'">'+
+      '<td><button type="button" class="sv2-ib'+(openRows[i]?' open':'')+'" data-act="toggleLine" data-i="'+i+'" title="More: lot, size, brand, colours · المزيد" aria-label="More: lot, size, brand, colours">⌄</button></td>'+
+      '<td class="idx">'+(i+1)+'</td>'+
+      '<td'+(OC?' class="oc-var"':'')+'>'+pv2Var(d)+'</td>'+
+      '<td>'+csel(PV2_FARM_TYPES,d.farm_type,'farm_type','ftype')+'</td><td>'+pv2Farm(d)+'</td><td>'+pv2Piv(d)+'</td>'+
+      '<td>'+csel(L.grades,d.grade,'grade')+'</td><td>'+pv2Pack(d,L)+'</td>'+
+      '<td>'+cin(d.package_count,'package_count','num')+'</td><td>'+pv2Pw(d,i)+'</td><td>'+pv2Std(d)+'</td>'+
+      '<td><button type="button" class="sv2-ib rm" data-act="rmLine" data-i="'+i+'" aria-label="Remove line '+(i+1)+'">×</button></td>'+
+    '</tr>'+
+    '<tr class="det'+(openRows[i]?' open':'')+'" data-line="'+i+'"><td></td><td colspan="11"><div class="sv2-dgrid">'+pv2Detail(d,L)+'</div></td></tr>';
+  }
+  function pv2CardHTML(d,i){
+    var L=pv2Lists();
+    return '<div class="sv2-lcard'+(openRows[i]?' open':'')+'" data-line="'+i+'">'+
+      '<div class="lh" data-act="toggleLine" data-i="'+i+'" role="button" tabindex="0" aria-expanded="'+(openRows[i]?'true':'false')+'">'+
+        '<b>'+(i+1)+'. '+esc(d.variety||'New line')+'</b><span class="sv2-sp"></span><span class="mono" style="color:var(--text3)">'+esc(d.package_count||0)+' pkg · '+esc(d.standard_weight||0)+' t</span>'+
+      '</div>'+
+      '<div class="lb">'+
+        dl(ar('Variety','الصنف'),pv2Var(d))+dl(ar('Farm type','نوع المزرعه'),csel(PV2_FARM_TYPES,d.farm_type,'farm_type','ftype'))+
+        dl(ar('Farm name','المزرعه'),pv2Farm(d))+dl(ar('Pivot No.','البيفوت'),pv2Piv(d))+
+        dl(ar('Grade','التصنيف'),csel(L.grades,d.grade,'grade'))+dl(ar('Packaging type','نوع العبوة'),pv2Pack(d,L))+
+        dl(ar('No. of packages','عدد'),cin(d.package_count,'package_count','num'))+dl(ar('Package wt t','وزن العبوه'),pv2Pw(d,i))+
+        dl(ar('Std wt t','الوزن القياسي'),pv2Std(d))+
+        pv2Detail(d,L)+
+        '<div class="full"><button type="button" class="sv2-btn sec sm" data-act="rmLine" data-i="'+i+'">Remove this line</button></div>'+
+      '</div>'+
+    '</div>';
+  }
+  /* ---- 2026-11-26 (Tarek): Potatoes + Other crops dropdowns in the citrus list style (typeable box + chevron + filtered
+     pop-up + 'Not in list?' footer). A <select> keeps its data-k / id / value (save, lists and suggestions unchanged) and sits
+     invisibly under a text box; an input with a datalist keeps its own value (free text allowed) and gets the same pop-up. ---- */
+  var CB={pop:null,cur:null,act:-1,shown:[]};
+  var CB_NIL='__sv2_nil__';
+  function cbText(sel){var o=sel.options[sel.selectedIndex];return o&&o.value&&o.value!==CB_NIL?String(o.text||'').trim():'';}
+  function cbOpts(c){
+    if(c.sel)return [].slice.call(c.sel.options).filter(function(o){return o.value&&o.value!==CB_NIL;}).map(function(o){return {v:o.value,t:String(o.text||'').trim()};});
+    var dlId=c.inp.getAttribute('data-sv2c-list'),dl=dlId&&host.querySelector('#'+dlId);
+    return dl?[].slice.call(dl.options).map(function(o){return {v:o.value,t:o.value};}).filter(function(o){return o.v;}):[];}
+  function cbPop(){if(CB.pop)return CB.pop;var p=document.createElement('div');p.className='sv2c-pop';p.setAttribute('role','listbox');p.id='sv2c-pop';
+    p.innerHTML='<div class="sv2c-opts"></div><div class="sv2c-foot"></div>';p.addEventListener('mousedown',function(e){e.preventDefault();});host.appendChild(p);CB.pop=p;return p;}
+  function cbPlace(){var c=CB.cur,p=CB.pop;if(!c||!p)return;if(!document.body.contains(c.inp)){cbClose();return;}
+    var r=c.inp.getBoundingClientRect(),vh=window.innerHeight||800,lim=vh,bar=host.querySelector('.sv2-submit'),bb=bar&&bar.getClientRects().length?bar.getBoundingClientRect():null;
+    if(bb&&bb.top>r.bottom&&bb.top<vh)lim=bb.top;var below=lim-r.bottom-8,above=r.top-8,w=Math.max(r.width,240);
+    p.style.left=Math.max(4,Math.min(r.left,(window.innerWidth||1000)-w-4))+'px';p.style.width=w+'px';
+    var up=below<200&&above>below,h=Math.max(Math.min(100,up?above:below),Math.min(320,up?above:below));p.style.maxHeight=h+'px';
+    if(up){p.style.top='';p.style.bottom=(vh-r.top+4)+'px';}else{p.style.bottom='';p.style.top=(r.bottom+4)+'px';}}
+  function cbClose(){if(CB.pop)CB.pop.classList.remove('on');if(CB.cur)CB.cur.inp.setAttribute('aria-expanded','false');CB.cur=null;CB.act=-1;CB.shown=[];}
+  function cbPick(o){var c=CB.cur;if(!c)return;
+    if(c.sel){c.sel.value=o.v;c.inp.value=o.t;c.sel.dispatchEvent(new Event('change',{bubbles:true}));}
+    else{c.inp.value=o.v;c.inp.dispatchEvent(new Event('input',{bubbles:true}));c.inp.dispatchEvent(new Event('change',{bubbles:true}));}
+    c.typed=false;cbClose();}
+  function cbRender(){var c=CB.cur,p=cbPop();if(!c)return;var all=cbOpts(c),q=c.typed?String(c.inp.value||'').trim().toLowerCase():'',
+      curV=c.sel?c.sel.value:c.inp.value,box=p.firstChild,foot=p.lastChild;
+    CB.shown=all.filter(function(o){return !q||o.t.toLowerCase().indexOf(q)>=0||String(o.v).toLowerCase().indexOf(q)>=0;}).slice(0,300);
+    box.innerHTML=CB.shown.length?CB.shown.map(function(o,i){return '<div class="sv2c-opt'+(o.v===curV?' cur':'')+'" role="option" dir="auto" data-i="'+i+'" aria-selected="'+(i===CB.act?'true':'false')+'">'+esc(o.t)+'</div>';}).join('')
+      :'<div class="sv2c-empty">'+(all.length?'No match in the list':'No list yet')+'</div>';
+    var typed=String(c.inp.value||'').trim(),exact=all.some(function(o){return o.t.toLowerCase()===typed.toLowerCase();}),f='';
+    if(c.sel&&[].slice.call(c.sel.options).some(function(o){return o.value===CB_NIL;}))
+      f+='<button type="button" class="sv2c-act" data-cb="nil">＋ Not in list? Send a new value for review</button>';
+    else if(!c.sel&&typed&&!exact&&c.typed)f+='<div class="sv2c-hint">Not in the list. The typed value is kept on this shipment as entered.</div>';
+    foot.innerHTML=f;p.classList.add('on');c.inp.setAttribute('aria-expanded','true');cbPlace();
+    var a=box.querySelector('[aria-selected="true"]');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest'});}
+  function cbOpen(inp){if(inp.disabled||inp.readOnly||RO)return;var w=inp.closest('.sv2c-w'),sel=w?w.querySelector('select'):null;
+    CB.cur={inp:inp,sel:sel,typed:false};CB.act=-1;cbRender();}
+  function cbCommit(c){if(!c||!c.sel)return;var typed=String(c.inp.value||'').trim().toLowerCase();
+    if(c.typed&&typed){var m=cbOpts(c).find(function(o){return o.t.toLowerCase()===typed;});if(m&&m.v!==c.sel.value){c.sel.value=m.v;c.sel.dispatchEvent(new Event('change',{bubbles:true}));}}
+    else if(c.typed&&!typed&&c.sel.value){c.sel.value='';c.sel.dispatchEvent(new Event('change',{bubbles:true}));}
+    c.inp.value=cbText(c.sel);}
+  function pv2Combos(){if(!PV2)return;var f=el('vform');if(!f)return;
+    qa('#sv2-vform select.csel,#sv2-vform select.sv2-in').forEach(function(sel){
+      if(!sel.parentNode.classList.contains('sv2c-w')){
+        var w=document.createElement('span');w.className='sv2c-w';sel.parentNode.insertBefore(w,sel);w.appendChild(sel);sel.tabIndex=-1;sel.setAttribute('aria-hidden','true');
+        var inp=document.createElement('input');inp.type='text';inp.className=(sel.classList.contains('sv2-in')?'sv2-in':'cin')+' sv2c-in';inp.setAttribute('dir','auto');inp.setAttribute('autocomplete','off');
+        inp.setAttribute('role','combobox');inp.setAttribute('aria-expanded','false');inp.setAttribute('aria-controls','sv2c-pop');
+        var lab=sel.id&&host.querySelector('label[for="'+sel.id+'"]');if(lab){inp.id=sel.id+'-cb';lab.setAttribute('for',inp.id);}else if(sel.getAttribute('data-k'))inp.setAttribute('aria-label',sel.getAttribute('data-k').replace(/_/g,' '));
+        w.appendChild(inp);
+        if(window.MutationObserver)new MutationObserver(function(){inp.classList.toggle('invalid',sel.classList.contains('invalid'));inp.disabled=sel.disabled;}).observe(sel,{attributes:true,attributeFilter:['class','disabled']});
+      }
+      var ci=sel.parentNode.querySelector('.sv2c-in');if(ci&&!(CB.cur&&CB.cur.inp===ci)){ci.value=cbText(sel);ci.disabled=sel.disabled;ci.title=ci.value;ci.classList.toggle('invalid',sel.classList.contains('invalid'));}
+    });
+    qa('#sv2-vform input[list]').forEach(function(inp){inp.setAttribute('data-sv2c-list',inp.getAttribute('list'));inp.removeAttribute('list');inp.classList.add('sv2c-dl');inp.setAttribute('autocomplete','off');});
+  }
+  function cbIsBox(t){return t&&t.classList&&(t.classList.contains('sv2c-in')||t.classList.contains('sv2c-dl'));}
+  function cbFocus(e){if(PV2&&cbIsBox(e.target)){cbOpen(e.target);if(e.target.classList.contains('sv2c-in')&&e.target.select)e.target.select();}}
+  function cbMouse(e){var t=e.target;if(!PV2)return;
+    if(cbIsBox(t)){if(!CB.cur||CB.cur.inp!==t)cbOpen(t);return;}
+    var o=t.closest&&t.closest('.sv2c-opt');if(o&&CB.cur){cbPick(CB.shown[+o.getAttribute('data-i')]);return;}
+    var b=t.closest&&t.closest('[data-cb="nil"]');if(b&&CB.cur&&CB.cur.sel){var sel=CB.cur.sel;cbClose();sel.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));   /* lets 'Not in list?' remember the current value, so Cancel puts it back */
+      sel.value=CB_NIL;sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(function(){pv2Combos();},0);}}
+  function cbInput(e){if(!PV2||!cbIsBox(e.target))return;if(!CB.cur||CB.cur.inp!==e.target)cbOpen(e.target);if(CB.cur){CB.cur.typed=true;CB.act=-1;cbRender();}}
+  function cbKey(e){if(!PV2||!CB.cur||e.target!==CB.cur.inp)return;var n=CB.shown.length;
+    if(e.key==='ArrowDown'){e.preventDefault();CB.act=n?(CB.act+1)%n:-1;cbRender();}
+    else if(e.key==='ArrowUp'){e.preventDefault();CB.act=n?(CB.act<=0?n-1:CB.act-1):-1;cbRender();}
+    else if(e.key==='Enter'){if(CB.act>=0&&CB.shown[CB.act]){e.preventDefault();cbPick(CB.shown[CB.act]);}}
+    else if(e.key==='Escape'){var c=CB.cur;if(c.sel)c.inp.value=cbText(c.sel);cbClose();}}
+  function cbBlur(e){if(!PV2||!CB.cur||e.target!==CB.cur.inp)return;var c=CB.cur;cbClose();cbCommit(c);}
+  function cbSync(){if(PV2)setTimeout(pv2Combos,0);}   /* a value set by 'Not in list?' / Cancel shows in its box */
+  function cbScroll(e){var t=e&&e.target;if(CB.cur&&!(CB.pop&&t&&t.nodeType===1&&CB.pop.contains(t)))cbPlace();}   /* scroll target can be the document / window */
   function lockRO(){if(!RO)return;qa('#sv2-vform input,#sv2-vform select,#sv2-vform textarea').forEach(function(f){f.disabled=true;});var t=el('ftitle');if(t)t.textContent='View shipment';}
   function renderLines(){
     setTimeout(lockRO,0);
     if(PT){
       el('lfoot').innerHTML='';
-      if(isNarrow()){el('lhead').innerHTML='';el('lbody').innerHTML='';el('lcards').innerHTML=LINES.map(OC?ocCardHTML:ptCardHTML).join('');}
-      else{el('lcards').innerHTML='';el('lhead').innerHTML=OC?ocHeadHTML():ptHeadHTML();el('lbody').innerHTML=LINES.map(OC?ocRowHTML:ptRowHTML).join('');}
+      if(isNarrow()){el('lhead').innerHTML='';el('lbody').innerHTML='';el('lcards').innerHTML=LINES.map(PV2?pv2CardHTML:OC?ocCardHTML:ptCardHTML).join('');}
+      else{el('lcards').innerHTML='';el('lhead').innerHTML=PV2?pv2HeadHTML():OC?ocHeadHTML():ptHeadHTML();el('lbody').innerHTML=LINES.map(PV2?pv2RowHTML:OC?ocRowHTML:ptRowHTML).join('');}
+      if(PV2)fillDatalist('sv2-dl-colour',pv2Lists().colours);
       recompute();ocVarHint();return;
     }
     if(isNarrow()){
@@ -1103,6 +1285,13 @@ function createInstance(host,O){
   function recompute(){
     setTimeout(totFade,0);
     syncLines();
+    if(PV2){var pc=0,ps=0;LINES.forEach(function(d,i){var c=intakeNum(d.package_count,1),w=intakeNum(d.package_weight),sw=(c!==null&&w!==null&&String(d.package_count).trim()!==''&&String(d.package_weight).trim()!=='')?intakeR6(c*w):'';
+        d.standard_weight=sw;qa('[data-line="'+i+'"] [data-k="standard_weight"]').forEach(function(f){f.value=sw;});
+        qa('[data-pecho="'+i+'"]').forEach(function(e){e.textContent=kgText(d.package_weight);});pc+=c||0;ps+=sw===''?0:+sw;});
+      var pst=function(id,v){var e=el(id);if(e)e.textContent=v;},pas=String(val('ppascol')).trim()===''?null:intakeNum(val('ppascol')),pv=pas===null||!ps?null:pas-ps;
+      pst('slines',LINES.length);pst('spacks',pc.toLocaleString());pst('snet',ps.toFixed(3)+' t');pst('spas',pas===null?'—':pas.toFixed(3)+' t');
+      pst('svar',pv===null?'—':(pv>=0?'+':'')+pv.toFixed(3)+' t');pst('svarp',pv===null?'—':(pv>=0?'+':'')+(pv/ps*100).toFixed(1)+' %');
+      pst('ppecho',kgText(val('ppascol')));pv2Combos();return;}
     if(OC){var opp=0,opk=0,osw=0;LINES.forEach(function(d){opp+=numOf(d.pallets);opk+=numOf(d.jumbo_count,1)+numOf(d.sack_count,1)+numOf(d.cartons_count,1)+numOf(d.benz_count,1);osw+=numOf(d.standard_weight);});
       var ost=function(id,v){var e=el(id);if(e)e.textContent=v;};
       ost('slines',LINES.length);ost('spal',(Math.round(opp*1000)/1000).toLocaleString());ost('spacks',opk.toLocaleString());ost('snet',osw.toFixed(2)+' t');return;}
@@ -1249,14 +1438,17 @@ function createInstance(host,O){
   var HDR_IDS=PT?['container','carta','ldate','vessel','ccount','client','country','country2','port','invoice','permit','workorder']:['container','carta','ldate','vessel','line','booking','invoice','po','etd','eta','arrival','depport','country','port','agent','shipper'];
   if(INTAKE)HDR_IDS=HDR_IDS.concat(['plandate','tcartons','hpascol']);
   if(regionOn())HDR_IDS=HDR_IDS.concat(['sregion']);
-  function blankHeader(){HDR_IDS.forEach(function(id){var e=el(id);if(e){e.value='';e.classList.remove('invalid');}});qa('#sv2-vform [data-touched]').forEach(function(e){e.removeAttribute('data-touched');e.classList.remove('invalid');});}
+  if(PV2)HDR_IDS=HDR_IDS.concat(['truck','ppascol']);
+  function blankHeader(){HDR_IDS.forEach(function(id){var e=el(id);if(e){e.value='';e.classList.remove('invalid');}});qa('#sv2-vform [data-touched]').forEach(function(e){e.removeAttribute('data-touched');e.classList.remove('invalid');});if(PV2){setTmode('container');pv2Lock(false);}}
+  /* form v2: version tag + Shipment type, Truck No., Pascol Wt t (whole shipment); a container shipment sends no vessel */
+  function pv2Hdr(h){if(!PV2)return h;var m=pv2Mode();h.form_v='2';h.transport_mode=m;h.truck_no=asciiDigits(val('truck'));h.pascol_total=asciiDigits(val('ppascol'));if(m==='container')h.vessel=null;return h;}
   function readHeader(){
-    if(OC)return {container_number:asciiDigits(val('container')),carta:asciiDigits(val('carta')),loading_date:val('ldate'),crop:val('crop'),station:val('station'),sector:val('sector'),
+    if(OC)return pv2Hdr({container_number:asciiDigits(val('container')),carta:asciiDigits(val('carta')),loading_date:val('ldate'),crop:val('crop'),station:val('station'),sector:val('sector'),
       season:val('pseason'),container_count:val('ccount'),client:val('client'),receiving_country:val('country'),country2:val('country2'),
-      receiving_port:val('port'),vessel:val('vessel'),invoice_no:val('invoice'),permit_no:val('permit'),work_order:val('workorder')};
-    if(PT)return {container_number:val('container'),carta:val('carta'),loading_date:val('ldate'),station:val('station'),sector:val('sector'),
+      receiving_port:val('port'),vessel:val('vessel'),invoice_no:val('invoice'),permit_no:val('permit'),work_order:val('workorder')});
+    if(PT)return pv2Hdr({container_number:val('container'),carta:val('carta'),loading_date:val('ldate'),station:val('station'),sector:val('sector'),
       season:val('pseason'),container_count:val('ccount'),client:val('client'),receiving_country:val('country'),country2:val('country2'),
-      receiving_port:val('port'),vessel:val('vessel'),invoice_no:val('invoice'),permit_no:val('permit'),work_order:val('workorder')};
+      receiving_port:val('port'),vessel:val('vessel'),invoice_no:val('invoice'),permit_no:val('permit'),work_order:val('workorder')});
     var h={product_id:PRODUCT,container_number:val('container'),carta:val('carta'),loading_date:val('ldate'),
       shipping_status:val('status'),vessel:val('vessel'),shipping_line:val('line'),booking_no:val('booking'),
       invoice_no:val('invoice'),po_number:val('po'),etd:val('etd'),eta:val('eta'),arrival_date:val('arrival'),
@@ -1340,16 +1532,18 @@ function createInstance(host,O){
   /* Tarek 2026-11-17: a Returned shipment may have negative cartons (returns are booked negative); weights stay non-negative */
   function isReturned(){return !PT&&val('status')==='Returned';}
   function lineNumProblem(k,v,ct){var pr=numProblem(v,INTKEYS[k]&&!(OC&&k==='pallets'));if(!pr&&OC&&NUMKEYS[k]&&isNegNum(v))pr='can\u2019t be negative';if(!pr&&!PT&&NONNEG_LINE[k]&&isNegNum(v)&&!(k==='carton_count'&&isReturned()))pr=k==='carton_count'?'can\u2019t be negative unless the status is Returned':'can\u2019t be negative';
+    if(!pr&&PV2&&(k==='package_count'||k==='package_weight')&&isNegNum(v))pr='can\u2019t be negative';
+    if(!pr&&PV2&&k==='package_weight'&&(intakeNum(v)||0)>2)pr='over 2 t per package (looks like kg — 25 kg = 0.025)';
     if(!pr&&!PT&&CARTON_WT[k]&&cartonOverMax(v,ct))pr=isBinType(ct)?'over 1 t per bin':'over 0.1 t per carton (looks like kg)';
     if(!pr&&!PT&&k==='packing_factor'&&packOverMax(v,ct))pr='over '+packMax(ct)+' t per carton (looks like kg)';return pr;}
   function lineCt(el){var ln=el&&el.closest&&el.closest('[data-line]');if(!ln)return '';var f=qa('[data-line="'+ln.getAttribute('data-line')+'"] [data-k="carton_type"]')[0];return f?f.value:'';}
-  function lineLabel(k){var m={variety:'Variety',pallet_count:'Pallets',net_weight:'Net t',pallets:'Pallets',standard_weight:'Standard wt',carton_count:'Cartons',
-    gross_weight:'Gross t',jumbo_count:'Jumbo #',sack_count:'Sack #',pascol_weight:'Pascol t',package_weight:'Package weight',pack_size:'Pack size',
+  function lineLabel(k){var m={package_count:'No. of packages',variety:'Variety',pallet_count:'Pallets',net_weight:'Net t',pallets:'Pallets',standard_weight:'Standard wt',carton_count:'Cartons',
+    gross_weight:'Gross t',jumbo_count:'Jumbo #',sack_count:'Sack #',pascol_weight:'Pascol t',package_weight:PV2?'Package wt t':'Package weight',pack_size:'Pack size',
     carton_net_weight:'Carton net t',carton_gross_weight:'Carton gross t',pascol_pct:INTAKE?'Pascol share t':'Pascol %',packing_weight:'Packing t',packing_factor:'Packaging per carton t',pascol_net:'Pascol net t',weight_variance:'Variance t'};return m[k]||k;}
   /* flag on: pascol_weight is copied in from the header, so it doesn't count as the user touching a line */
   function isUntouched(d){return !d.id&&Object.keys(d).every(function(k){return k==='id'||k==='net_flag'||k.charAt(0)==='_'||(INTAKE&&k==='pascol_weight')||String(d[k]||'').trim()==='';});}
   /* new orchard lines: Net t is computed (cartons × carton net t, read-only), so cartons + carton net are what's required */
-  var REQ_LINE=PT?['variety','pallets','standard_weight']:['variety','pallet_count','carton_count','carton_net_weight'];
+  var REQ_LINE=PV2?['variety','package_count','package_weight']:PT?['variety','pallets','standard_weight']:['variety','pallet_count','carton_count','carton_net_weight'];
   function markCell(i,k,on){qa('[data-line="'+i+'"] [data-k="'+k+'"]').forEach(function(f){f.classList.toggle('invalid',on);f.setAttribute('aria-invalid',on?'true':'false');});}
   function checkLines(){
     var problems=[];
@@ -1374,9 +1568,12 @@ function createInstance(host,O){
     if(RO)return;
     if(SAVING)return;
     clearFormError();TRIED=true;
-    var okR=!OC||validateField('crop'),okC=validateField('container'),okL=validateField('ldate'),okS=PT||validateField('status');
-    var missH=[];if(!okR)missH.push('Crop');if(!okC)missH.push('Container No.');if(!okL)missH.push(INTAKE?'Actual loading date':'Loading Date');if(!okS)missH.push('Shipping Status');
-    if(missH.length){SAVE_NEW=false;showFormError(missH.join(', ')+(missH.length>1?' are':' is')+' required.');el(!okR?'crop':!okC?'container':!okL?'ldate':'status').focus();return;}
+    var pvV=PV2&&pv2Mode()==='vessel';if(pvV&&MODE==='create'){var cr=el('container');if(cr)cr.value=vesselRef();}   /* vessel: reference = 'Vessel / Truck No.' */
+    var okR=!OC||validateField('crop'),okV=!pvV||(validateField('vessel')&validateField('truck'))===1,okC=pvV?okV:validateField('container'),okL=validateField('ldate'),okS=PT||validateField('status'),okI=!PV2||validateField('invoice');
+    var missH=[];if(!okR)missH.push('Crop');if(!okC)missH.push(pvV?'Vessel Name and Truck No.':'Container No.');if(!okI)missH.push('Invoice No.');if(!okL)missH.push(INTAKE?'Actual loading date':'Loading Date');if(!okS)missH.push('Shipping Status');
+    if(missH.length){SAVE_NEW=false;showFormError(missH.join(', ')+(missH.length>1?' are':' is')+' required.');el(!okR?'crop':!okC?(pvV?(String(val('vessel')).trim()?'truck':'vessel'):'container'):!okL?'ldate':!okI?'invoice':'status').focus();return;}
+    if(PV2){var pp=el('ppascol'),ppr=pp&&String(pp.value).trim()?(numProblem(pp.value,0)||(isNegNum(pp.value)?'can\u2019t be negative':null)||((intakeNum(pp.value)||0)>60?'over 60 t for one shipment (looks like kg)':null)):null;
+      if(pp){pp.classList.toggle('invalid',!!ppr);pp.setAttribute('aria-invalid',ppr?'true':'false');}if(ppr){showFormError('Pascol Wt '+ppr+'.');pp.focus();return;}}
     /* v0.2 (Ash): no RPC, no edge function, no write. v0.2 P3: the required checks above still run, then a neutral note */
     if(OC&&!OC_WRITES){SAVE_NEW=false;showFormNote(OC_PENDING+'. Nothing was saved.');return;}
     if(!PT&&el('depdiff')&&el('depdiff').checked){var dd=val('depdate'),dErr=!dd?'Departure date is required':(dd<val('ldate')?'Departure date can\'t be before the loading date':(!SV2_SEND_DEPARTURE_DATE?'Preview only: departure date can\'t be saved yet. Untick the box to save':''));
@@ -1389,7 +1586,7 @@ function createInstance(host,O){
     /* drop new lines nobody touched (the form starts with one blank line) */
     var before=LINES.length;LINES=LINES.filter(function(d){return !isUntouched(d);});
     if(LINES.length!==before){openRows={};renderLines();}
-    if(!LINES.length){LINES=[blankLine()];openRows={0:true};renderLines();showFormError(PT?'Add at least one line with a variety, pallets and weight.':'Add at least one line with a variety, pallets, cartons and carton net.');return;}
+    if(!LINES.length){LINES=[blankLine()];openRows={0:true};renderLines();showFormError(PV2?'Add at least one line with a variety, No. of packages and Package wt.':PT?'Add at least one line with a variety, pallets and weight.':'Add at least one line with a variety, pallets, cartons and carton net.');return;}
     var problems=checkLines();
     if(problems.length){showFormError('Fix these before saving:\n'+problems.join('\n'));qa('.invalid[data-k]').forEach(openFor);paintProblems();var f=host.querySelector('.invalid[data-k]');if(f)f.focus();return;}
     var hdr=readHeader();
@@ -1512,10 +1709,13 @@ function createInstance(host,O){
         setv('container',h.container_number);setv('carta',h.carta);setv('ldate',h.loading_date);setv('vessel',h.vessel);setv('ccount',h.container_count);
         setv('client',h.client);setv('country',h.receiving_country);setv('country2',h.country2);setv('port',h.receiving_port);
         setv('invoice',h.invoice_no);setv('permit',h.permit_no);setv('workorder',h.work_order);
+        if(PV2){setv('truck',h.truck_no);setv('ppascol',h.pascol_total!=null&&String(h.pascol_total).trim()!==''?tidyNum(h.pascol_total):'');setTmode(h.transport_mode==='vessel'?'vessel':'container');}
         fillHeaderSelects({station:h.station,sector:h.sector,season:h.season,crop:h.crop,vessel:h.vessel,client:h.client,receiving_port:h.receiving_port});deriveDate();
-        LINES=lines.map(function(l){var d=blankLine();Object.keys(d).forEach(function(k){if(l[k]!=null)d[k]=NUMKEYS[k]?tidyNum(l[k]):String(l[k]);});d.id=l.id||null;if(OC)d.variety=ocVarShow(d.variety);return d;});
+        LINES=lines.map(function(l){var d=blankLine();Object.keys(d).forEach(function(k){if(l[k]!=null)d[k]=NUMKEYS[k]?tidyNum(l[k]):String(l[k]);});d.id=l.id||null;if(OC)d.variety=ocVarShow(d.variety);
+          if(PV2&&!String(d.sack_colour||'').trim()&&String(d.jumbo_colour||'').trim()){d.sack_colour=d.jumbo_colour;d.jumbo_colour='';}   /* one Packaging colour field */
+          return d;});
         if(!LINES.length)LINES=[blankLine()];
-        openRows={};renderLines();setDirty(false);lockRO();
+        openRows={};renderLines();setDirty(false);pv2Lock(true);lockRO();
         el('ftitle').textContent='Edit shipment';el('ctxref').textContent=h.container_number||container;setSeasonChip();return;
       }
       setv('container',h.container_number);setv('carta',h.carta);setv('ldate',h.loading_date);
@@ -1592,6 +1792,10 @@ function createInstance(host,O){
   function emptyF(){var f={};FACETS.forEach(function(x){f[x.key]=[];});return f;}
   ST.f=emptyF();
   function HEADS(){
+    /* 2026-11-26 form v2: Packages / Std wt / Pascol / Variance instead of Pallets / Packs */
+    if(PV2)return [{t:'Shipment',s:'ref'}].concat(OC?[{t:'Crop',s:'crop'}]:[]).concat([{t:'Station',s:'station'},{t:'Client',s:'client'},{t:'Country',s:'region'},{t:'Loaded',s:'loaded'},
+      {t:'Lines',s:'lines',n:1},{t:'Packages',s:'pkg',n:1,tip:'No. of packages (عدد)'},{t:'Std wt t',s:'net',n:1,tip:'No. of packages × Package wt'},{t:'Pascol t',s:'pas',n:1,tip:'Pascol Wt for the whole shipment'},
+      {t:'Variance',s:'pvar',tip:'Pascol − Std wt. Green = within ±0.5 t, amber = over, grey = no Pascol yet.'},{t:'Grade'}]);
     if(OC)return [{t:'Container',s:'ref'},{t:'Crop',s:'crop'},{t:'Station',s:'station'},{t:'Client',s:'client'},{t:'Country',s:'region'},{t:'Loaded',s:'loaded'},
       {t:'Lines',s:'lines',n:1},{t:'Pallets',s:'pal',n:1},{t:'Packs',s:'pkg',n:1,tip:'Jumbo bags + sacks + cartons + benz'},{t:'Standard t',s:'net',n:1},{t:'Grade'}];
     if(PT)return [{t:'Container',s:'ref'},{t:'Station',s:'station'},{t:'Client',s:'client'},{t:'Country',s:'region'},{t:'Loaded',s:'loaded'},
@@ -1604,13 +1808,15 @@ function createInstance(host,O){
   var GET={ref:function(c){return c.ref;},client:function(c){return c.hdr.client||'';},region:function(c){return c.hdr.region||'';},
     loaded:function(c){return c._t;},lines:function(c){return c.lines.length;},pal:function(c){return c._pal;},ctn:function(c){return c._ctn;},
     net:function(c){return c._net;},grs:function(c){return c._grs;},vr:function(c){return c._pending||c._vr===null?-Infinity:c._vr;},status:function(c){return c.hdr.status||'';},
-    station:function(c){return OC?c.hdr.stationL||'':c.hdr.station||'';},pkg:function(c){return c._ctn;},crop:function(c){return c.hdr.cropL||'';}};
+    station:function(c){return OC?c.hdr.stationL||'':c.hdr.station||'';},pkg:function(c){return c._ctn;},crop:function(c){return c.hdr.cropL||'';},
+    pas:function(c){return c._pas==null?-Infinity:c._pas;},pvar:function(c){return c._pvar==null?-Infinity:c._pvar;}};
   if(OC)GET.client=function(c){return c.hdr.clientL||'';};
   var TEXTSORT={ref:1,client:1,region:1,status:1,station:1,crop:1};
   function deriveAll(){DATA.forEach(function(c){
     c._pal=sum(c.lines,'pal');c._ctn=sum(c.lines,'ctn');c._net=sum(c.lines,'net');c._grs=sum(c.lines,'grs');
     c._cls=uniq(c.lines.map(function(l){return l.cc;}));c._pack=uniq(c.lines.map(function(l){return packShort(l.pk);}));
     c._t=+new Date(c.hdr.loaded+'T00:00');
+    if(PV2){var pt=c.hdr.pasTot!=null&&String(c.hdr.pasTot).trim()!==''&&isFinite(+c.hdr.pasTot)?+c.hdr.pasTot:null;c._pas=pt;c._pvar=pt===null?null:pt-c._net;}
     c._pending=c.lines.every(function(l){return l.pas==='—'||l.pas==null||l.pas==='';});
     /* 2026-11-26: stored line variance, else line Pascol net − Net; a line with neither = not stored (null → '—', never a green 0.00) */
     var lvr=c.lines.map(function(l){var has=function(x){return x!=null&&String(x).trim()!==''&&isFinite(+x);};return has(l.vr)?+l.vr:has(l.pasnet)&&has(l.net)?(+l.pasnet)-(+l.net):null;});
@@ -1619,11 +1825,11 @@ function createInstance(host,O){
       c.hdr.portL=ocLabel(c.hdr.port,'port');c.hdr.vesselL=ocLabel(c.hdr.vessel,'transport');
       c.lines.forEach(function(l){l.farmL=ocLabel(l.farm,'farm');l.ptL=ocLabel(l.pt,'packing_type');});}
     if(OC){c._grade=uniq(c.lines.map(function(l){return l.grade;}));
-      var op=[c.ref,c.hdr.crop,c.hdr.cropL,c.hdr.vesselL,c.hdr.carta,c.hdr.invoice,c.hdr.clientL,c.hdr.region,c.hdr.portL,c.hdr.stationL,c.hdr.sector,c.hdr.season];
+      var op=[c.ref,c.hdr.truck,c.hdr.crop,c.hdr.cropL,c.hdr.vesselL,c.hdr.carta,c.hdr.invoice,c.hdr.clientL,c.hdr.region,c.hdr.portL,c.hdr.stationL,c.hdr.sector,c.hdr.season];
       c.lines.forEach(function(l){op.push(l.v,l.pivot,l.farmL,l.grade,l.ptL,l.size2,l.crop,l.brand,l.op,l.lot);});
       c._search=op.join('  ').toLowerCase();return;}
     if(PT){c._grade=uniq(c.lines.map(function(l){return l.grade;}));
-      var pp=[c.ref,c.hdr.vessel,c.hdr.carta,c.hdr.invoice,c.hdr.client,c.hdr.region,c.hdr.port,c.hdr.station,c.hdr.sector,c.hdr.season];
+      var pp=[c.ref,c.hdr.truck,c.hdr.vessel,c.hdr.carta,c.hdr.invoice,c.hdr.client,c.hdr.region,c.hdr.port,c.hdr.station,c.hdr.sector,c.hdr.season];
       c.lines.forEach(function(l){pp.push(l.v,l.pivot,l.farm,l.grade,l.ct,l.size2,l.crop,l.brand,l.op,l.lot);});
       c._search=pp.join('  ').toLowerCase();return;}
     var parts=[c.ref,c.hdr.vessel,c.hdr.line,c.hdr.booking,c.hdr.invoice,c.hdr.po,c.hdr.carta,c.hdr.client,c.hdr.subclient,c.hdr.port,c.hdr.region,c.hdr.pack,c.hdr.agent,c.hdr.shipper,c.hdr.status];
@@ -1670,6 +1876,8 @@ function createInstance(host,O){
   }
   /* All rows view: one table row per shipment line; a click opens its container */
   function ROWHEADS(){
+    if(PV2)return [{t:'Shipment'},{t:'Loaded'},{t:'Client'},{t:'Variety'},{t:'Farm type / farm'},{t:'Grade'},{t:'Packaging'},
+      {t:'Packages',n:1},{t:'Package wt t',n:1},{t:'Std wt t',n:1}];
     if(PT)return [{t:'Container'},{t:'Loaded'},{t:'Client'},{t:'Variety'},{t:'Pivot / farm'},{t:'Grade'},{t:'Packaging'},
       {t:'Pallets',n:1},{t:OC?'Packs':'Packages',n:1},{t:'Standard t',n:1}];
     return [{t:'Container'},{t:'Loaded'},{t:'Client'},{t:'Destination'},{t:'Variety'},{t:'Class'},{t:'Packing'},
@@ -1678,6 +1886,12 @@ function createInstance(host,O){
   function lineRows(rows){var out=[];rows.forEach(function(c){c.lines.forEach(function(l){out.push({c:c,l:l});});});return out;}
   function lineRowHTML(x){
     var c=x.c,l=x.l,i=DATA.indexOf(c);
+    if(PV2)return '<tr tabindex="0" data-act="open" data-i="'+i+'">'+
+      '<td><span class="sv2-ref">'+hl(c.ref)+'</span></td><td>'+fmtDate(c.hdr.loaded)+'</td>'+
+      '<td>'+hl(OC?(c.hdr.clientL||'—'):(c.hdr.client||'—'))+'</td><td>'+hl(OC?ocVarShow(l.v)||'—':(l.v||'—'))+(OC&&c.hdr.cropL?'<span class="sv2-sub">'+hl(c.hdr.cropL)+'</span>':'')+'</td>'+
+      '<td>'+hl(l.ft||'—')+'<span class="sv2-sub">'+hl(OC?(l.farmL||''):(l.farm||''))+(l.pivot?' · pivot '+hl(l.pivot):'')+'</span></td><td>'+hl(l.grade||'—')+'</td>'+
+      '<td>'+hl(OC?(l.ptL||'—'):(l.ct||'—'))+'</td><td class="num">'+(l.ctn?Number(l.ctn).toLocaleString():'—')+'</td><td class="num">'+(l.pw==null?'—':esc(l.pw))+'</td>'+
+      '<td class="num">'+fmtT(l.net)+'</td></tr>';
     if(PT)return '<tr tabindex="0" data-act="open" data-i="'+i+'">'+
       '<td><span class="sv2-ref">'+hl(c.ref)+'</span></td><td>'+fmtDate(c.hdr.loaded)+'</td>'+
       '<td>'+hl(OC?(c.hdr.clientL||'—'):(c.hdr.client||'—'))+'</td><td>'+hl(l.v||'—')+(OC&&c.hdr.cropL?'<span class="sv2-sub">'+hl(c.hdr.cropL)+'</span>':'')+'</td>'+
@@ -1698,11 +1912,22 @@ function createInstance(host,O){
     return '<div class="sv2-card" tabindex="0" role="button" data-act="open" data-i="'+i+'">'+
       '<div class="t"><span class="sv2-ref">'+hl(c.ref)+'</span><span class="sv2-sub">'+fmtDate(c.hdr.loaded)+'</span></div>'+
       '<div><b>'+hl(l.v||'—')+'</b> · '+hl(PT?(l.grade||''):(l.cc||''))+'</div>'+
-      '<div class="sv2-sub">'+(l.pal==null?'—':l.pal)+' plt · '+(l.ctn==null?'—':Number(l.ctn).toLocaleString())+(PT?' packs':' ctn')+' · '+fmtT(l.net)+' t</div></div>';
+      '<div class="sv2-sub">'+(PV2?'':(l.pal==null?'—':l.pal)+' plt · ')+(l.ctn==null?'—':Number(l.ctn).toLocaleString())+(PV2?' packages':PT?' packs':' ctn')+' · '+fmtT(l.net)+' t</div></div>';
   }
   function weighChip(c){if(c._pending)return '<span class="sv2-w pend">Pending</span>';if(c._vr===null)return '<span class="sv2-w pend" title="Variance not stored for this shipment">—</span>';var ok=Math.abs(c._vr)<=0.5;return '<span class="sv2-w '+(ok?'ok':'off')+'">'+(c._vr>0?'+':'')+fmtT(c._vr)+' t</span>';}
+  function pv2VarChip(c){if(c._pvar==null)return '<span class="sv2-w pend" title="No Pascol Wt on this shipment yet">—</span>';var ok=Math.abs(c._pvar)<=0.5,pc=c._net?(c._pvar/c._net*100):null;
+    return '<span class="sv2-w '+(ok?'ok':'off')+'">'+(c._pvar>0?'+':'')+fmtT(c._pvar)+' t'+(pc===null?'':' · '+(pc>0?'+':'')+pc.toFixed(1)+' %')+'</span>';}
   function rowHTML(c){
     var i=DATA.indexOf(c);
+    if(PV2){var vs=c.hdr.tmode==='vessel',sub=vs?'Vessel shipment':[(OC?c.hdr.vesselL:c.hdr.vessel)||'',c.hdr.carta||'',c.hdr.truck?'Truck '+c.hdr.truck:''].filter(Boolean).join(' · ');
+      return '<tr tabindex="0" data-act="open" data-i="'+i+'">'+
+      '<td><span class="sv2-ref">'+hl(c.ref)+'</span><span class="sv2-sub">'+hl(sub)+'</span></td>'+
+      (OC?'<td>'+hl(c.hdr.cropL||'—')+'</td>':'')+
+      '<td>'+hl((OC?c.hdr.stationL:c.hdr.station)||'—')+'<span class="sv2-sub">'+hl(c.hdr.sector||'')+(c.hdr.season?' · '+hl(c.hdr.season):'')+'</span></td>'+
+      '<td>'+hl((OC?c.hdr.clientL:c.hdr.client)||'—')+'</td><td>'+hl(c.hdr.region||'—')+'<span class="sv2-sub">'+hl((OC?c.hdr.portL:c.hdr.port)||'')+'</span></td>'+
+      '<td>'+fmtDate(c.hdr.loaded)+'</td><td class="num">'+c.lines.length+'</td><td class="num">'+c._ctn.toLocaleString()+'</td><td class="num">'+fmtT(c._net)+'</td>'+
+      '<td class="num">'+(c._pas==null?'—':fmtT(c._pas))+'</td><td>'+pv2VarChip(c)+'</td>'+
+      '<td><div class="sv2-tags">'+c._grade.map(function(g){return '<span class="sv2-tg">'+hl(g)+'</span>';}).join('')+'</div></td></tr>';}
     if(OC)return '<tr tabindex="0" data-act="open" data-i="'+i+'">'+
       '<td><span class="sv2-ref">'+hl(c.ref)+'</span><span class="sv2-sub">'+hl(c.hdr.vesselL||'')+(c.hdr.carta?' · '+hl(c.hdr.carta):'')+'</span></td>'+
       '<td>'+hl(c.hdr.cropL||'—')+'</td>'+
@@ -1732,6 +1957,11 @@ function createInstance(host,O){
   }
   function cardHTML(c){
     var i=DATA.indexOf(c);
+    if(PV2)return '<div class="sv2-card" tabindex="0" role="button" data-act="open" data-i="'+i+'">'+
+      '<div class="t"><span class="sv2-ref">'+hl(c.ref)+'</span><span class="sv2-sub">'+hl(OC?(c.hdr.cropL||''):(c.hdr.station||''))+'</span></div>'+
+      '<div><b>'+hl((OC?c.hdr.clientL:c.hdr.client)||'—')+'</b> · '+hl(c.hdr.region||(OC?c.hdr.portL:c.hdr.port)||'—')+'</div>'+
+      '<div class="sv2-sub">Loaded '+fmtDate(c.hdr.loaded)+' · '+c._ctn.toLocaleString()+' packages · '+fmtT(c._net)+' t'+(c._pas==null?'':' · Pascol '+fmtT(c._pas)+' t')+'</div>'+
+      (c._pvar==null?'':'<div>'+pv2VarChip(c)+'</div>')+'</div>';
     if(OC)return '<div class="sv2-card" tabindex="0" role="button" data-act="open" data-i="'+i+'">'+
       '<div class="t"><span class="sv2-ref">'+hl(c.ref)+'</span><span class="sv2-sub">'+hl(c.hdr.cropL||'')+'</span></div>'+
       '<div><b>'+hl(c.hdr.clientL||'—')+'</b> · '+hl(c.hdr.region||c.hdr.portL||'—')+'</div>'+
@@ -1824,7 +2054,14 @@ function createInstance(host,O){
   }
 
   /* ---------------------------------------------------------- CSV export (Other crops): the shown shipments, one row per line */
-  function ocCsvRows(){var rows=[['Container','Loading date','Crop','Packing station','Sector','Client','Country','Shipping port','Vessel','Carta',
+  function ocCsvRows(){
+    if(PV2){var r2=[['Shipment','Shipment type','Truck No.','Loading date','Crop','Packing station','Sector','Client','Country','Shipping port','Vessel','Carta','Invoice No.','Pascol Wt t (shipment)',
+        'Variety','Farm type','Farm','Pivot','Grade','Packaging type','No. of packages','Package wt t','Std wt t','Pascol share t']];
+      sortRows(filtered()).forEach(function(c){c.lines.forEach(function(l){r2.push([c.ref,c.hdr.tmode==='vessel'?'Vessel':'Container',c.hdr.truck,c.hdr.loaded,c.hdr.cropL,c.hdr.stationL,c.hdr.sector,c.hdr.clientL,c.hdr.region,c.hdr.portL,
+        c.hdr.tmode==='vessel'?c.hdr.vesselL:'',c.hdr.carta,c.hdr.invoice,c._pas,
+        l.v,l.ft,l.farmL,l.pivot,l.grade,l.ptL,l.ctn||'',l.pw,l.net,l.pas==='—'?'':l.pas]);});});
+      return r2;}
+    var rows=[['Container','Loading date','Crop','Packing station','Sector','Client','Country','Shipping port','Vessel','Carta',
       'Variety','Pivot','Farm','Grade','Packaging','Pallets','Jumbo #','Sack #','Cartons #','Benz #','Standard t']];
     sortRows(filtered()).forEach(function(c){c.lines.forEach(function(l){rows.push([c.ref,c.hdr.loaded,c.hdr.cropL,c.hdr.stationL,c.hdr.sector,c.hdr.clientL,c.hdr.region,c.hdr.portL,c.hdr.vesselL,c.hdr.carta,
       l.v,l.pivot,l.farmL,l.grade,l.ptL,l.pal,l.jumboN,l.sackN,l.cartonsN,l.benzN,l.net]);});});
@@ -1872,13 +2109,14 @@ function createInstance(host,O){
           if(d.id){var di=EDIT.deletedIds.indexOf(d.id);if(di>=0)EDIT.deletedIds.splice(di,1);}
           var nr={};if(!(OC&&isNarrow()))Object.keys(openRows).forEach(function(k){k=+k;nr[k>=ix?k+1:k]=openRows[k];});nr[ix]=true;openRows=nr;PAS_LIVE=true;renderLines();setDirty(true);});
         break;}
+      case 'tmode':if(MODE==='edit'||RO)break;setTmode(t.getAttribute('data-v'));setDirty(true);break;
       case 'addLine':syncLines();LINES.push(blankLine());if(OC&&isNarrow())openRows={};openRows[LINES.length-1]=PT?isNarrow():true;renderLines();setDirty(true);break;
       case 'dupLast':{syncLines();PAS_LIVE=true;var last=LINES[LINES.length-1];var c=last?Object.assign({},last):blankLine();c.id=null;
         /* same pack, new lot: the fields that differ from line to line start empty */
-        (PT?['lot','pallets','jumbo_count','sack_count','cartons_count','benz_count','standard_weight','pascol_weight']
+        (PV2?['lot','package_count','standard_weight']:PT?['lot','pallets','jumbo_count','sack_count','cartons_count','benz_count','standard_weight','pascol_weight']
            :['lot','traceability_code','pallet_count','carton_count','net_weight','gross_weight','pascol_pct','packing_weight','pascol_net','weight_variance']).forEach(function(k){if(k in c)c[k]='';});
         LINES.push(c);var ni=LINES.length-1;if(OC&&isNarrow())openRows={};openRows[ni]=PT?isNarrow():true;renderLines();setDirty(true);
-        var nf=q('[data-line="'+ni+'"] [data-k="'+(PT?'pallets':'pallet_count')+'"]');if(nf)nf.focus();break;}
+        var nf=q('[data-line="'+ni+'"] [data-k="'+(PV2?'package_count':PT?'pallets':'pallet_count')+'"]');if(nf)nf.focus();break;}
     }
   }
   function onKey(e){
@@ -1893,6 +2131,7 @@ function createInstance(host,O){
       /* re-check carton counts: negative is fine only while the status is Returned */
       qa('[data-line] [data-k="carton_count"]').forEach(function(f){if(!String(f.value||'').trim())return;var pr=lineNumProblem('carton_count',f.value);f.classList.toggle('invalid',!!pr);f.setAttribute('aria-invalid',pr?'true':'false');f.title=pr?lineLabel('carton_count')+' '+pr:'';});}
     else if(c==='client')fillSubclients();
+    else if(c==='ftype'){var fl=t.closest('[data-line]');if(fl)qa('[data-line="'+fl.getAttribute('data-line')+'"] [data-k="pivot"]').forEach(function(pv){var sup=t.value==='Supplier';pv.disabled=sup;if(sup)pv.value='';pv.placeholder=sup?'no pivot':'';pv.title=sup?'Suppliers have no pivot':'';});}
     else if(c==='ldate'){deriveDate();syncDep();}
     else if(c==='depdiff')syncDep();
     else if(!PT&&t.getAttribute&&t.getAttribute('data-k')==='carton_type'&&t.closest('[data-line]')){syncLines();paintWarns();}   /* gap 4: bin limit follows the carton type */
@@ -1908,6 +2147,7 @@ function createInstance(host,O){
     if(OC&&t.getAttribute&&t.getAttribute('data-req'))t.setAttribute('data-touched','1');
     if(t.id==='sv2-q'){ST.q=t.value.trim().toLowerCase();ST.limit=RENDER_STEP;el('searchwrap').classList.toggle('has',!!t.value);clearTimeout(searchT);searchT=setTimeout(renderList,150);return;}
     if(INTAKE&&(t.id==='sv2-tcartons'||t.id==='sv2-hpascol')){PAS_LIVE=true;recompute();}
+    if(PV2&&t.id==='sv2-ppascol')recompute();
     var ln=t.closest('[data-line]');
     if(ln){var k=t.getAttribute('data-k'),li=LINES[+ln.getAttribute('data-line')];
       if(PAS_IN[k]||(INTAKE&&INTAKE_IN[k])||(CARTON_SRC[k]&&li&&!li.id))PAS_LIVE=true;recompute();}
@@ -1928,6 +2168,7 @@ function createInstance(host,O){
   }
   host.addEventListener('click',onClick);host.addEventListener('keydown',onKey);
   host.addEventListener('change',onChange);host.addEventListener('input',onInput);host.addEventListener('focusout',onBlur);
+  if(PV2){host.addEventListener('focusin',cbFocus);host.addEventListener('mousedown',cbMouse);host.addEventListener('input',cbInput);host.addEventListener('keydown',cbKey);host.addEventListener('focusout',cbBlur);host.addEventListener('change',cbSync);window.addEventListener('scroll',cbScroll,true);window.addEventListener('resize',cbScroll);}
 
   /* the sticky Save bar sits above Vision's phone bottom nav when that nav is showing */
   function placeBar(){var n=document.querySelector('.mobile-nav'),h=0;
@@ -2033,6 +2274,7 @@ function createInstance(host,O){
       if(formMQ){if(formMQ.removeEventListener)formMQ.removeEventListener('change',onMQ);else if(formMQ.removeListener)formMQ.removeListener(onMQ);}
       if(footRO)footRO.disconnect();
       host.removeEventListener('click',onClick);host.removeEventListener('keydown',onKey);
+      if(PV2){host.removeEventListener('focusin',cbFocus);host.removeEventListener('mousedown',cbMouse);host.removeEventListener('input',cbInput);host.removeEventListener('keydown',cbKey);host.removeEventListener('focusout',cbBlur);host.removeEventListener('change',cbSync);window.removeEventListener('scroll',cbScroll,true);window.removeEventListener('resize',cbScroll);if(CB.pop&&CB.pop.parentNode)CB.pop.parentNode.removeChild(CB.pop);}
       host.removeEventListener('change',onChange);host.removeEventListener('input',onInput);host.removeEventListener('focusout',onBlur);host.removeEventListener('focusin',onFormFocus);
       clearTimeout(searchT);clearTimeout(toastT);clearTimeout(undoT);closeModal();if(toastEl){toastEl.remove();toastEl=null;}if(undoEl){undoEl.remove();undoEl=null;}
       if(LISTS&&LISTS.detach){try{LISTS.detach();}catch(_e){}}LISTS=null;
