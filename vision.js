@@ -8293,9 +8293,9 @@ function ExportView(props){
 ═══════════════════════════════════════ */
 var ROLES = {
   admin:       {label:'Admin',                color:'#1e2d22',badge:'#2b5c3f',
-                perms:{viewFG:true, createFG:true, editFG:true, approveFG:true,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:true, viewConfig:true, viewEscalation:true, escalate:true, allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true, manageLeads:true, giveAccess:true}},
+                perms:{editShipments:true, viewFG:true, createFG:true, editFG:true, approveFG:true,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:true, viewConfig:true, viewEscalation:true, escalate:true, allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true, manageLeads:true, giveAccess:true}},
   power_user:  {label:'Power User',           color:'#0f5a52',badge:'#159085',
-                perms:{viewFG:true, createFG:true, editFG:true, approveFG:true,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:true, viewConfig:true, viewEscalation:true, escalate:true, allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true, manageLeads:true, giveAccess:false}},
+                perms:{editShipments:true, viewFG:true, createFG:true, editFG:true, approveFG:true,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:true, viewConfig:true, viewEscalation:true, escalate:true, allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true, manageLeads:true, giveAccess:false}},
   board:       {label:'Senior Board',         color:'#2a0a5a',badge:'#6a10b0',
                 perms:{viewFG:true, createFG:false,editFG:true ,approveFG:false,viewClientQC:true,createClientQC:false,viewExport:false,viewAnalytics:true,viewAdmin:false,viewConfig:false,viewEscalation:true, escalate:false,allPackhouses:true, viewShipments:true}},
   qc_manager:  {label:'QC Manager',           color:'#2b5c3f',badge:'#4a8c62',
@@ -8307,7 +8307,7 @@ var ROLES = {
   inspector:   {label:'Inspector',            color:'#3a6a3a',badge:'#5a9a5a',
                 perms:{viewFG:true, createFG:true, editFG:true ,approveFG:false,viewClientQC:false,createClientQC:false,viewExport:false,viewAnalytics:false,viewAdmin:false,viewConfig:false,viewEscalation:false,escalate:false,allPackhouses:false, viewShipments:false}},
   commercial:  {label:'Commercial / Export',  color:'#7a5010',badge:'#b87820',
-                perms:{viewFG:true, createFG:false,editFG:true ,approveFG:false,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:false,viewConfig:false,viewEscalation:false,escalate:false,allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true}},
+                perms:{editShipments:true, viewFG:true, createFG:false,editFG:true ,approveFG:false,viewClientQC:true,createClientQC:true,viewExport:true,viewAnalytics:true,viewAdmin:false,viewConfig:false,viewEscalation:false,escalate:false,allPackhouses:true, viewShipments:true, viewCRM:true, editCRM:true, viewLeads:true, editLeadStatus:true}},
   marketing:   {label:'Marketing',             color:'#6a2ca0',badge:'#9a5ad0',
                 perms:{viewFG:false,createFG:false,editFG:false,approveFG:false,viewClientQC:false,createClientQC:false,viewExport:false,viewAnalytics:false,viewAdmin:false,viewConfig:false,viewEscalation:false,escalate:false,allPackhouses:false,viewShipments:false,viewCRM:true, editCRM:false,viewLeads:true, editLeadStatus:true, manageLeads:true}},
   client_qc:   {label:'Client QC Management',color:'#1a4a7a',badge:'#2a6aaa',
@@ -8326,7 +8326,7 @@ var PERM_LABELS = {
   viewFG:'View inspections',createFG:'Create inspections',editFG:'Edit inspections',
   approveFG:'Approve / reject',viewClientQC:'View client reports',createClientQC:'Submit client reports',
   viewExport:'Export data',viewAnalytics:'Analytics dashboard',viewAdmin:'User management',viewConfig:'System configuration',
-  viewEscalation:'Board review / escalation queue',escalate:'Escalate batches',allPackhouses:'All packhouses',viewShipments:'View shipments',viewCRM:'CRM — claims & regions (view)',
+  viewEscalation:'Board review / escalation queue',escalate:'Escalate batches',allPackhouses:'All packhouses',viewShipments:'View shipments',editShipments:'Shipments — enter & edit (Manage)',viewCRM:'CRM — claims & regions (view)',
   editCRM:'CRM — raise/edit claims, grade, redirect',viewLeads:'Leads — view',editLeadStatus:'Leads — change status & add notes',manageLeads:'Leads — full management (create, import, assign, campaigns)'
 };
 var INITIAL_USERS = []; /* Demo users removed — users load from Supabase */
@@ -8551,6 +8551,7 @@ function AdminCenter(props){
   var sPrefixErr=useState(''); var prefixErr=sPrefixErr[0]; var setPrefixErr=sPrefixErr[1];
   var sNewVal2=useState('#2b5c3f'); var newVal2=sNewVal2[0]; var setNewVal2=sNewVal2[1];
   var sNewVal2Arr=useState([]); var newVal2Arr=sNewVal2Arr[0]; var setNewVal2Arr=sNewVal2Arr[1];
+  var sNewValAr=useState(''); var newValAr=sNewValAr[0]; var setNewValAr=sNewValAr[1];   /* 2026-11-26: Other crops variety Arabic name */
   var sNewSecAr=useState(''); var newSecAr=sNewSecAr[0]; var setNewSecAr=sNewSecAr[1];
   var sSelProd=useState(''); var selProd=sSelProd[0]; var setSelProd=sSelProd[1];
   /* Set selProd to first product once config loads */
@@ -8621,8 +8622,13 @@ function AdminCenter(props){
         }
       });
   }
+  /* 2026-11-26 (Tarek): Other crops is an inactive product (Shipments only, staging), so config.products leaves it out; on staging
+     the Varieties tab lists it too, with its 7 crops as categories, so admins add Other crops varieties here like any product. */
+  function cfgVarietyProducts(){var ps=config.products||[];
+    return (typeof otherCropsOn==='function'&&otherCropsOn()&&!ps.some(function(p){return p.id==='other_crops';}))?ps.concat([OC_PRODUCT]):ps;}
   function addVariety(){
     if(!newVal.trim()) return;
+    var arName=selProd==='other_crops'?newValAr.trim():'';setNewValAr('');
     var categoryId=newVal2Arr[0]||null;
     var n=Object.assign({},config);
     n.varieties=Object.assign({},n.varieties);
@@ -8634,6 +8640,7 @@ function AdminCenter(props){
     supabase.auth.getUser().then(function(ur){
       var row={name:newVal.trim(),product_id:prodId,active:true};
       if(categoryId) row.category_id=categoryId;
+      if(prodId==='other_crops'&&arName) row.raw_names=[arName];   /* the Other crops form shows this Arabic name */
       if(ur.data&&ur.data.user) row.created_by=ur.data.user.id;
       return supabase.from('varieties').insert([row]);
     })
@@ -9286,7 +9293,7 @@ function AdminCenter(props){
             ce('div',{style:{flex:'0 0 150px'}},
               ce('label',{className:'form-label'},'Product'),
               ce('select',{className:'form-select',value:selProd,onChange:function(e){setSelProd(e.target.value);}},
-                (config.products||[]).map(function(p){return ce('option',{key:p.id,value:p.id},p.name);})
+                cfgVarietyProducts().map(function(p){return ce('option',{key:p.id,value:p.id},p.name);})
               )
             ),
             ce('div',{style:{flex:'0 0 150px'}},
@@ -9297,11 +9304,12 @@ function AdminCenter(props){
               )
             ),
             ce('input',{className:'form-input',value:newVal,onChange:function(e){setNewVal(e.target.value);},placeholder:'Variety name e.g. Navel, Valencia…',style:{flex:1},onKeyDown:function(e){if(e.key==='Enter')addVariety();}}),
+            selProd==='other_crops'&&ce('input',{className:'form-input',value:newValAr,dir:'rtl',lang:'ar',onChange:function(e){setNewValAr(e.target.value);},placeholder:'الاسم بالعربي (shown in the Other crops form)',style:{flex:1},onKeyDown:function(e){if(e.key==='Enter')addVariety();}}),
             ce('button',{className:'btn btn-primary btn-sm',onClick:addVariety},'+ Add')
           )
         ),
         /* All products with their varieties grouped by category */
-        (config.products||[]).map(function(prod){
+        cfgVarietyProducts().map(function(prod){
           var fullVars=(config.varietiesFull||{})[prod.id]||[];
           var simpleVars=(config.varieties||{})[prod.id]||[];
           var cats=(config.categories||{})[prod.id]||[];
@@ -14396,6 +14404,45 @@ function CqcPreviewModal(props){
   );
 }
 
+/* Shipments "Manage" — the entry sandbox on public.shipments_v2 lives in shipments_v2.js
+   (window.ShipV2), loaded on first use so nobody else pays for it. It uses this app's own
+   supabase client and registers visionCrumbGuard so leaving with unsaved changes asks first. */
+/* Other crops (Vera 2026-11-23): flag-gated Shipments product. ON only when index.html sets SV2_OTHER_CROPS_ENABLED=true AND this is
+   the staging host (VISION_IS_DEV); the prod address resolves OFF. Same check as shipments_v2.js.
+   The products row is inactive (active=false) until a separate yes, so config.products never lists it: it is added here. */
+var OC_PRODUCT={id:'other_crops',name:'Other crops',color:'#b5651d',active:true};
+function otherCropsOn(){return window.SV2_OTHER_CROPS_ENABLED===true&&window.VISION_IS_DEV===true;}
+var _shipV2Load=null;
+function loadShipV2(){
+  if(window.ShipV2)return Promise.resolve(window.ShipV2);
+  if(_shipV2Load)return _shipV2Load;
+  _shipV2Load=new Promise(function(res,rej){var s=document.createElement('script');
+    s.src='shipments_v2.js?v=5105c7a0eb';   /* ?v= = content hash, stamped by tools/stamp-assets.py */
+    s.onload=function(){if(window.ShipV2)res(window.ShipV2);else{_shipV2Load=null;rej(new Error('The Manage tool did not start.'));}};
+    s.onerror=function(){_shipV2Load=null;rej(new Error('Could not load the Manage tool. Check the connection.'));};
+    document.head.appendChild(s);});
+  return _shipV2Load;
+}
+function ShipV2Host(props){
+  var ref=React.useRef(null),api=React.useRef(null);
+  var sErr=useState(''),err=sErr[0],setErr=sErr[1];
+  var sTick=useState(0),tick=sTick[0],setTick=sTick[1];
+  React.useEffect(function(){
+    var alive=true;setErr('');
+    loadShipV2().then(function(SV){
+      if(!alive||!ref.current)return;
+      api.current=SV.mount(ref.current,{sb:supabase,product:props.product,productName:props.productName,productColor:props.productColor,
+        seasonId:props.seasonId,seasonName:props.seasonName,trueActiveSeasonId:props.trueActiveSeasonId,trueActiveSeasonName:props.trueActiveSeasonName,
+        canConfigure:!!props.canConfigure,readOnly:!!props.readOnly});
+      if(props.apiRef)props.apiRef.current=api.current;
+    },function(e){if(alive)setErr((e&&e.message)||'Could not load the Manage tool.');});
+    var g=function(){return !api.current||api.current.confirmLeave();};visionCrumbGuard=g;
+    return function(){alive=false;if(visionCrumbGuard===g)visionCrumbGuard=null;
+      if(api.current){api.current.unmount();api.current=null;}if(props.apiRef)props.apiRef.current=null;};
+  },[props.product,props.seasonId,props.readOnly,tick]);
+  if(err)return ce(VisionLoadError,{title:'Manage didn\u2019t load',detail:err,pad:40,onRetry:function(){setTick(function(t){return t+1;});}});
+  return ce('div',{ref:ref});
+}
 function ShipmentsMgmt(props){
 
   var config=props.config||INITIAL_CONFIG;
@@ -14428,6 +14475,19 @@ function ShipmentsMgmt(props){
   var sStatusFilter=useState(''); var statusFilter=sStatusFilter[0]; var setStatusFilter=sStatusFilter[1];
   var sCountryFilter=useState([]); var countryFilter=sCountryFilter[0]; var setCountryFilter=sCountryFilter[1];
   var sAggMode=useState(true); var aggMode=sAggMode[0]; var setAggMode=sAggMode[1];
+  /* Manage = shipment entry sandbox (shipments_v2.js), editors only; never writes public.shipments */
+  /* only products the entry tool supports (orchards + potatoes); Berries/Olives have no form yet */
+  var shipPT=selProd==='potatoes'||selProd==='other_crops';   /* Other crops shows the Pivots columns */
+  /* 2026-11-26 step 2 (Tarek): every product that has Manage shows ONLY Manage (old record views retired there);
+     people without edit rights get it read-only. Berries / Olives (no Manage) keep the old view. */
+  var manageProduct=(['citrus','grapes','mango','pomegranate','potatoes'].indexOf(selProd)>=0||(selProd==='other_crops'&&otherCropsOn()));
+  var canManage=!!(props.perms&&props.perms.editShipments)&&manageProduct;
+  /* 2026-11-26 (Tarek): Manage is the main page of each product for people who can edit shipments (others keep All rows) */
+  /* 2026-11-26 step 1 (Tarek): editors always see Manage (no tab row); people without edit rights keep All rows / By container
+     until read-only Manage lands (step 2). setManage stays for the existing callers. */
+  var sManage=useState(true); var manage=manageProduct; var setManage=sManage[1];
+  var shipV2Api=React.useRef(null);
+  function leaveManageOk(){var a=shipV2Api.current;return !manage||!a||a.confirmLeave();}
   var sSelShip=useState(null); var selShip=sSelShip[0]; var setSelShip=sSelShip[1];
   var sSelContainer=useState(null); var selContainer=sSelContainer[0]; var setSelContainer=sSelContainer[1];
   useEscClose(!!selContainer,function(){setSelContainer(null);if(typeof setSelShip==='function')setSelShip(null);});
@@ -14461,7 +14521,19 @@ function ShipmentsMgmt(props){
   React.useEffect(function(){
     if(!config.activeSeasonId) return;
     var prods=(config.products||[]).filter(function(p){return p.active!==false;});
+    /* v0.2 P3 (Pixel): Other crops (staging only) has no rows before the DB step: show 'no data', not 'loading…' forever */
+    if(otherCropsOn()&&!prods.some(function(p){return p.id==='other_crops';}))setProdCounts(function(prev){return Object.assign({},prev,{other_crops:0});});
     if(!prods.length) return;
+    /* 2026-11-26 (Tarek): counts come from the new shipments table (shipments_v2, what Manage shows), one RPC for all products;
+       key = container + loading date. If the RPC fails, fall back to the old per-product count from public.shipments. */
+    var seasonAtCall=config.activeSeasonId;
+    Promise.resolve(supabase.rpc('get_shipment_v2_container_counts',{p_season:seasonAtCall})).then(function(r){
+      if(r&&!r.error&&r.data&&typeof r.data==='object'){
+        var d=r.data;setProdCounts(function(prev){var o=Object.assign({},prev);prods.forEach(function(p){o[p.id]=+d[p.id]||0;});
+          if(otherCropsOn())o.other_crops=+d.other_crops||0;return o;});
+      } else oldCounts();
+    },oldCounts);
+    function oldCounts(){
     prods.forEach(function(p){
       /* Fetch container_number+carta to count unique voyages (matches By Container aggregation key) */
       var allKeys=new Set();
@@ -14486,11 +14558,14 @@ function ShipmentsMgmt(props){
       function countFailed(){setProdCounts(function(prev){return Object.assign({},prev,{[p.id]:null});});}
       fetchCountPage(0);
     });
+    }
   },[config.activeSeasonId]);
 
   /* Load shipments + grades + CQC matches */
   React.useEffect(function(){
     if(!selProd) return;
+    /* 2026-11-26 step 2: products shown in Manage never read the old table here (Manage loads its own data) */
+    if(manageProduct){setLoading(false);setShipErr('');setCqcEnriching(false);return;}
     /* Reset data when product or season changes */
     setShipments([]);
     setGrades([]);
@@ -14696,6 +14771,7 @@ function ShipmentsMgmt(props){
   /* ── Hero product selector ── */
   if(!selProd){
     var prodList=(config.products||[]).filter(function(p){return p.active!==false;});
+    if(otherCropsOn()&&!prodList.some(function(p){return p.id==='other_crops';}))prodList=prodList.concat([OC_PRODUCT]);   /* Shipments only */
     var greeting=(function(){var h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening';})();
     var firstName=currentUser.name?currentUser.name.split(' ')[0]:'';
     return ce('div',{className:'landing',style:{paddingTop:0}},
@@ -14833,7 +14909,7 @@ function ShipmentsMgmt(props){
   var filteredRows=shipments.filter(matchesFilters);
   var filteredContainers=containers.filter(containerMatchesFilters);
 
-  var selProdObj=(config.products||[]).find(function(p){return p.id===selProd;})||{name:selProd,color:'var(--accent)'};
+  var selProdObj=(config.products||[]).find(function(p){return p.id===selProd;})||(selProd==='other_crops'?OC_PRODUCT:{name:selProd,color:'var(--accent)'});
   var totalClaims=grades.filter(function(g){return g.has_claim;}).length;
   var totalGraded=grades.filter(function(g){return g.grade;}).length;
 
@@ -15024,18 +15100,19 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
       ce('div',{style:{position:'sticky',top:0,zIndex:20,background:'var(--bg)',borderBottom:'1px solid var(--border)',padding:'16px 16px 12px',marginBottom:0}},
       /* Topbar */
       ce('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}},
-        ce('button',{className:'btn btn-secondary btn-sm',onClick:function(){setSelProd(null);setSelShip(null);setSelContainer(null);setSearch('');setStatusFilter('');setCountryFilter([]);setCqcShipFilter('all');}},'\u2190 Products'),
+        ce('button',{className:'btn btn-secondary btn-sm',onClick:function(){if(!leaveManageOk())return;setManage(true);setSelProd(null);setSelShip(null);setSelContainer(null);setSearch('');setStatusFilter('');setCountryFilter([]);setCqcShipFilter('all');setInspShipFilter('all');}},'\u2190 Products'),
         ce('div',{style:{width:10,height:10,borderRadius:'50%',background:selProdObj.color||'var(--accent)',flexShrink:0}}),
         ce('span',{style:{fontFamily:'var(--font-display)',fontSize:16}},selProdObj.name,' Shipments'),
-        totalGraded>0&&ce('span',{className:'badge badge-pass',style:{fontSize:11}},totalGraded+' graded'),
-        /* Toggle */
-        ce('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:8,padding:'3px'}},
-          ce('button',{style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:500,background:!aggMode?'var(--card)':'transparent',color:!aggMode?'var(--text)':'var(--text3)',border:'none',cursor:'pointer',boxShadow:!aggMode?'0 1px 3px rgba(0,0,0,.1)':'none'},onClick:function(){setAggMode(false);}},'All rows'),
-          ce('button',{style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:500,background:aggMode?'var(--card)':'transparent',color:aggMode?'var(--text)':'var(--text3)',border:'none',cursor:'pointer',boxShadow:aggMode?'0 1px 3px rgba(0,0,0,.1)':'none'},onClick:function(){setAggMode(true);}},'By container')
+        totalGraded>0&&!manage&&ce('span',{className:'badge badge-pass',style:{fontSize:11}},totalGraded+' graded'),   /* old-table count: not on Manage */
+        /* Toggle: old record views, only for people without edit rights (editors always get Manage, 2026-11-26) */
+        !manage&&ce('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:8,padding:'3px'}},
+          ce('button',{style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:500,background:!aggMode&&!manage?'var(--card)':'transparent',color:!aggMode&&!manage?'var(--text)':'var(--text3)',border:'none',cursor:'pointer',boxShadow:!aggMode&&!manage?'0 1px 3px rgba(0,0,0,.1)':'none'},onClick:function(){if(!leaveManageOk())return;setManage(false);setAggMode(false);}},'All rows'),
+          ce('button',{style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:500,background:aggMode&&!manage?'var(--card)':'transparent',color:aggMode&&!manage?'var(--text)':'var(--text3)',border:'none',cursor:'pointer',boxShadow:aggMode&&!manage?'0 1px 3px rgba(0,0,0,.1)':'none'},onClick:function(){if(!leaveManageOk())return;setManage(false);setAggMode(true);}},'By container'),
+          canManage&&ce('button',{title:'Enter and edit shipments','aria-pressed':manage?'true':'false',style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:manage?600:500,background:manage?'var(--card)':'transparent',color:manage?'var(--accent)':'var(--text3)',border:'none',cursor:'pointer',boxShadow:manage?'0 1px 3px rgba(0,0,0,.1)':'none'},onClick:function(){setSelContainer(null);setManage(true);}},'Manage')
         )
       ),
       /* Filters */
-      ce('div',{className:'vsh-filters',style:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
+      !manage&&ce('div',{className:'vsh-filters',style:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
         ce('button',{type:'button',className:'vsh-fbtn',onClick:function(e){var on=document.documentElement.classList.toggle('vsh-f');e.currentTarget.textContent=on?'\u2715 Hide filters':'\u2699 Filters';}},'\u2699 Filters'),
         ce('input',{className:'form-input',style:{width:220,fontSize:13,padding:'6px 10px'},placeholder:'Search container, client, variety...',value:search,onChange:function(e){setSearch(e.target.value);}}),
         ce('select',{className:'form-select',style:{width:140,fontSize:13,padding:'6px 10px'},value:statusFilter,onChange:function(e){setStatusFilter(e.target.value);}},
@@ -15060,7 +15137,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
           )
         ),
         countryFilter.length>0&&ce('button',{className:'btn btn-secondary btn-sm',onClick:function(){setCountryFilter([]);}},'\u00d7 Clear countries'),
-        ce('div',{style:{display:'flex',gap:4,marginLeft:'auto'}},
+        !shipPT&&ce('div',{style:{display:'flex',gap:4,marginLeft:'auto'}},
           [['all','All'],['with','\u2713 With CQC'],['without','No CQC']].map(function(f){
             var active=cqcShipFilter===f[0];
             return ce('button',{key:f[0],onClick:function(){setCqcShipFilter(f[0]);},
@@ -15071,7 +15148,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
             },f[1]);
           })
         ),
-        ce('div',{style:{display:'flex',gap:4}},
+        !shipPT&&ce('div',{style:{display:'flex',gap:4}},
           [['all','All'],['with','\u2713 With insp'],['without','No insp']].map(function(f){
             var active=inspShipFilter===f[0];
             return ce('button',{key:f[0],onClick:function(){setInspShipFilter(f[0]);},
@@ -15084,16 +15161,16 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
         )
       ),
       /* KPIs — filtered counts */
-      ce('div',{className:'vsh-kpis',style:{display:'flex',gap:10,marginBottom:4,flexWrap:'wrap'}},
+      !manage&&ce('div',{className:'vsh-kpis',style:{display:'flex',gap:10,marginBottom:4,flexWrap:'wrap'}},
         ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},aggMode?'Containers':'Rows'),
           ce('div',{className:'kpi-value',style:{fontSize:22}},aggMode?filteredContainers.length:filteredRows.length)
         ),
-        ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
+        !shipPT&&ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'Claims'),
           ce('div',{className:'kpi-value',style:{fontSize:13,color:'var(--text3)',fontWeight:500,paddingTop:5}},'in CRM')
         ),
-        ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
+        !shipPT&&ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'With CQC'),
           ce('div',{className:'kpi-value',style:{fontSize:22,color:'var(--green)'}},
             cqcEnriching
@@ -15103,7 +15180,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                 :[...new Set(filteredRows.filter(function(s){return (cqcMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length)
           )
         ),
-        ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
+        !shipPT&&ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'With insp'),
           ce('div',{className:'kpi-value',style:{fontSize:22,color:'#2563ad'}},
             cqcEnriching
@@ -15113,7 +15190,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                 :[...new Set(filteredRows.filter(function(s){return (inspMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0)>0;}).map(function(s){return s.container_number;}))].length)
           )
         ),
-        ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
+        !shipPT&&ce('div',{className:'kpi',style:{flex:'1 1 100px',padding:'10px 14px'}},
           ce('div',{className:'kpi-label'},'Graded'),
           ce('div',{className:'kpi-value',style:{fontSize:22}},
             aggMode
@@ -15125,7 +15202,11 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
       ), /* end frozen header */
       /* Table content */
       ce('div',{style:{padding:'12px 16px 16px'}},
-      /* Table */
+      /* Table — or the Manage sandbox */
+      manage?ce(ShipV2Host,{apiRef:shipV2Api,product:selProd,productName:selProdObj.name,productColor:selProdObj.color,
+        seasonId:config.activeSeasonId,seasonName:((config.seasons||[]).find(function(x){return x.id===config.activeSeasonId;})||{}).name||'',
+        trueActiveSeasonId:config.trueActiveSeasonId,trueActiveSeasonName:((config.seasons||[]).find(function(x){return x.id===config.trueActiveSeasonId;})||{}).name||'',
+        canConfigure:currentUser.role==='admin',readOnly:!canManage}):
       shipErr&&!loading?ce(VisionLoadError,{title:'Shipments didn\u2019t load',detail:shipErr,pad:60,onRetry:function(){setShipTick(function(t){return t+1;});}}):
       loading?ce(VisionLoader,{pad:60}):
       aggMode
@@ -15136,12 +15217,14 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
               ce('thead',{style:{position:'sticky',top:0,zIndex:10,background:'var(--card)'}},ce('tr',null,
                 ce('th',null,'Container'),ce('th',null,'Invoice(s)'),ce('th',null,'Varieties'),ce('th',null,'Farms'),
                 ce('th',null,'Subclient'),ce('th',null,'Country'),ce('th',null,'Loading'),
-                ce('th',null,'Arrival'),ce('th',null,'Status'),ce('th',{style:{textAlign:'center'}},'Cartons'),
-                ce('th',{style:{textAlign:'center'}},'CQC'),ce('th',{style:{textAlign:'center'}},'INSP'),ce('th',{style:{textAlign:'center'}},'Grade'),
-                ce('th',{style:{textAlign:'center'}},'Claim')
+                ce('th',null,'Arrival'),ce('th',null,'Status'),
+                /* Cartons / CQC / INSP / Grade / Claim are orchard ideas — not shown for Potatoes (packed in bags, no CQC or grading) */
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'Cartons'),
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'CQC'),!shipPT&&ce('th',{style:{textAlign:'center'}},'INSP'),!shipPT&&ce('th',{style:{textAlign:'center'}},'Grade'),
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'Claim')
               )),
               ce('tbody',null,
-                filteredContainers.length===0&&ce('tr',null,ce('td',{colSpan:14,style:{textAlign:'center',padding:32,color:'var(--text3)'}},'No containers found')),
+                filteredContainers.length===0&&ce('tr',null,ce('td',{colSpan:shipPT?9:14,style:{textAlign:'center',padding:32,color:'var(--text3)'}},'No containers found')),
                 filteredContainers.map(function(c){
                   var g=getGrade(c.container_number);
                   var cqcCount=cqcMatches[(c.container_number||'').replace(/\s+/g,'').toUpperCase()]||0;
@@ -15169,17 +15252,17 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                     ce('td',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',whiteSpace:'nowrap'}},loadArr[0]||'—'),
                     ce('td',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',whiteSpace:'nowrap'}},arrArr[arrArr.length-1]||'—'),
                     ce('td',null, statArr.length? statArr.map(function(st,i){return ce('span',{key:i,className:'badge '+(st==='Delivered'?'badge-pass':st==='In Transit'?'badge-warn':'badge-neutral'),style:{fontSize:10,marginRight:3}},st);}) : ce('span',{style:{color:'var(--text3)',fontSize:12}},'\u2014')),
-                    ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},c.total_cartons||'—'),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},c.total_cartons||'—'),
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       cqcEnriching?shimCell():(cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       cqcEnriching?shimCell():(inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       g&&g.grade?ce('span',{style:{fontWeight:700,color:gradeColor(g.grade),fontSize:14}},g.grade):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       g&&g.has_claim?ce('span',{className:'badge badge-fail',style:{fontSize:10}},'\uD83D\uDEA9'+(g.claim_value?' '+(g.claim_currency||'USD')+' '+Number(g.claim_value).toLocaleString():'')):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
                     )
                   );
@@ -15195,12 +15278,14 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
               ce('thead',{style:{position:'sticky',top:0,zIndex:10,background:'var(--card)'}},ce('tr',null,
                 ce('th',null,'Container'),ce('th',null,'Carta'),ce('th',null,'Invoice No.'),
                 ce('th',null,'Variety'),ce('th',null,'Farm'),ce('th',null,'Subclient'),ce('th',null,'Loading'),
-                ce('th',null,'Arrival'),ce('th',null,'Status'),ce('th',{style:{textAlign:'center'}},'Cartons'),
-                ce('th',{style:{textAlign:'center'}},'CQC'),ce('th',{style:{textAlign:'center'}},'INSP'),ce('th',{style:{textAlign:'center'}},'Grade'),
-                ce('th',{style:{textAlign:'center'}},'Claim')
+                ce('th',null,'Arrival'),ce('th',null,'Status'),
+                /* Cartons / CQC / INSP / Grade / Claim are orchard ideas — not shown for Potatoes (packed in bags, no CQC or grading) */
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'Cartons'),
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'CQC'),!shipPT&&ce('th',{style:{textAlign:'center'}},'INSP'),!shipPT&&ce('th',{style:{textAlign:'center'}},'Grade'),
+                !shipPT&&ce('th',{style:{textAlign:'center'}},'Claim')
               )),
               ce('tbody',null,
-                filteredRows.length===0&&ce('tr',null,ce('td',{colSpan:14,style:{textAlign:'center',padding:32,color:'var(--text3)'}},'No shipments found')),
+                filteredRows.length===0&&ce('tr',null,ce('td',{colSpan:shipPT?9:14,style:{textAlign:'center',padding:32,color:'var(--text3)'}},'No shipments found')),
                 filteredRows.map(function(s){
                   var g=getGrade(s.container_number);
                   var cqcCount=cqcMatches[(s.container_number||'').replace(/\s+/g,'').toUpperCase()]||0;
@@ -15216,17 +15301,17 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
                     ce('td',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',whiteSpace:'nowrap'}},s.loading_date||'—'),
                     ce('td',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--text3)',whiteSpace:'nowrap'}},s.arrival_date||'—'),
                     ce('td',null,s.shipping_status?ce('span',{className:'badge '+(s.shipping_status==='Delivered'?'badge-pass':s.shipping_status==='In Transit'?'badge-warn':'badge-neutral'),style:{fontSize:10}},s.shipping_status):'—'),
-                    ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},s.carton_count||'—'),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12}},s.carton_count||'—'),
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       cqcEnriching?shimCell():(cqcCount>0?ce('span',{className:'badge badge-pass',style:{fontSize:10}},'\u2713 '+cqcCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       cqcEnriching?shimCell():(inspCount>0?ce('span',{style:{background:'rgba(37,99,173,0.12)',color:'#2563ad',fontSize:10,padding:'2px 7px',borderRadius:6,fontWeight:600}},'\u2713 '+inspCount):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—'))
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       g&&g.grade?ce('span',{style:{fontWeight:700,color:gradeColor(g.grade),fontSize:14}},g.grade):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
                     ),
-                    ce('td',{style:{textAlign:'center'}},
+                    !shipPT&&ce('td',{style:{textAlign:'center'}},
                       g&&g.has_claim?ce('span',{className:'badge badge-fail',style:{fontSize:10}},'\uD83D\uDEA9'+(g.claim_value?' '+(g.claim_currency||'USD')+' '+Number(g.claim_value).toLocaleString():'')):ce('span',{style:{color:'var(--text3)',fontSize:12}},'—')
                     )
                   );
@@ -15237,7 +15322,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
         )
       ) /* end table content */
     ), /* end main column */
-    mkSidePanel(),
+    manage?null:mkSidePanel(),
         inspPopup&&ce(InspPreviewModal,{popup:inspPopup,onClose:function(){setInspPopup(null);}}),
         sShipCqc[0]&&ce(CqcPreviewModal,{popup:sShipCqc[0],config:config,onClose:function(){sShipCqc[1](null);}})
   );
@@ -15472,9 +15557,183 @@ var DALOS_IS_INVITE=(function(){
 })();
 
 var DALOS_SUPABASE_URL='https://sfyjvgjwvtwkrnqrvqyc.supabase.co';
+
+/* ── Sign in again without losing the page (2026-11-17) ─────────────────────
+   When the DalOS session ends underneath an open page (signed out on another
+   device, or the refresh token is gone), API calls start failing with 401.
+   Instead of failing them, this wrapper (passed to createClient as its fetch)
+   checks whether the session is really gone, opens a sign-in box over the page
+   and holds those calls. After the user signs in, each held call is sent again
+   once with the new token. The page is never reloaded, so open forms, typed
+   lines, filters and scroll stay. Saves still go through their stale checks.
+   Only calls to this project's REST/RPC, functions and storage are held; auth
+   calls (/auth/v1/) pass straight through. Nothing happens unless a user is
+   signed in to the app (setUser), so the login screen is never affected. */
+var dalosReauth=(function(){
+  var nativeFetch=window.fetch.bind(window);
+  var user=null;          /* {name,email} of the signed-in app user, or null */
+  var waiting=null;       /* {promise,resolve} while the box is open */
+  var labels=[];          /* what is waiting, e.g. "Save shipment MSKU 1234567" */
+  var box=null;
+  var RPC_LABELS={save_shipment_v2_full:'Save shipment',edit_shipment_v2_full:'Save shipment changes',
+    save_shipment_v2_potato_full:'Save shipment',edit_shipment_v2_potato_full:'Save shipment changes',
+    delete_shipment_v2_container:'Delete shipment'};
+  function isApi(url){return url.indexOf(DALOS_SUPABASE_URL+'/')===0&&url.indexOf('/auth/v1/')<0;}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function describe(url,init){
+    var m=(init&&init.method||'GET').toUpperCase();
+    if(m==='GET'||m==='HEAD')return null;           /* reads reload silently, no label */
+    var rpc=(url.match(/\/rest\/v1\/rpc\/([a-z0-9_]+)/i)||[])[1];
+    var lbl=rpc&&(RPC_LABELS[rpc]||(/^edit_.*inspection/.test(rpc)?'Save inspection changes':/^save_.*inspection/.test(rpc)?'Save inspection':null));
+    if(!lbl)return 'Save your changes';
+    try{var b=typeof init.body==='string'?JSON.parse(init.body):null;
+      var cn=b&&((b.p_header&&b.p_header.container_number)||b.p_container);
+      if(cn)lbl+=' '+String(cn).trim();}catch(e){}
+    return lbl;
+  }
+  /* Is the session behind this request really gone? (not just a permission 401) */
+  function sessionLost(h){
+    var auth=h.get('Authorization')||'',key=h.get('apikey')||'';
+    if(!auth||auth==='Bearer '+key)return Promise.resolve(true);   /* no user token at all any more */
+    return nativeFetch(DALOS_SUPABASE_URL+'/auth/v1/user',{headers:{apikey:key,Authorization:auth}})
+      .then(function(r){return r.status===401||r.status===403;},function(){return false;});
+  }
+  function css(){
+    if(document.getElementById('dra-css'))return;
+    var s=document.createElement('style');s.id='dra-css';
+    s.textContent=
+      '.dra-scrim{position:fixed;inset:0;z-index:10000;background:rgba(26,26,23,.42);display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--font-body,"Instrument Sans",sans-serif);color:var(--text,#1a1a17)}'+
+      '.dra-box{width:100%;max-width:420px;box-sizing:border-box;background:var(--card,#fff);border:1px solid var(--border,#d0cbbe);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.22);padding:24px 24px 20px;display:flex;flex-direction:column;gap:14px}'+
+      '.dra-ic{width:40px;height:40px;border-radius:10px;background:var(--green-bg,#e8f5ec);border:1px solid var(--green-border,#8ecba4);display:flex;align-items:center;justify-content:center}'+
+      '.dra-box h2{margin:0;font-family:var(--font-display,"DM Serif Display",serif);font-weight:400;font-size:22px}'+
+      '.dra-box p{margin:6px 0 0;font-size:13px;line-height:1.5;color:var(--text2,#4a4840)}'+
+      '.dra-wait{background:var(--amber-bg,#fdf3e0);border:1px solid var(--amber-border,#e8c87a);border-radius:8px;padding:9px 11px;font-size:12.5px;color:#6e4a0e}'+
+      '.dra-wait span{font-family:var(--font-mono,"DM Mono",monospace)}'+
+      '.dra-f{display:flex;flex-direction:column;gap:4px}'+
+      '.dra-f label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b675b}'+
+      '.dra-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}'+
+      '.dra-f input{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border2,#bcb8ae);border-radius:6px;background:#fff;color:var(--text,#1a1a17);outline:none}'+
+      '.dra-f input:focus{border-color:var(--accent,#2b5c3f)}'+
+      '.dra-f input[readonly]{background:var(--bg,#f0ede6);border-color:var(--border,#d0cbbe);color:var(--text2,#4a4840)}'+
+      '.dra-f input.bad{border-color:var(--red,#b03030);background:var(--red-bg,#faeaea)}'+
+      '.dra-err{font-size:12.5px;color:#9a2525}.dra-ok{font-size:12.5px;color:var(--green,#1e6b3a)}'+
+      '.dra-go{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:11px 14px;border:none;border-radius:8px;background:var(--accent,#2b5c3f);color:#fff;cursor:pointer}'+
+      '.dra-go:hover{background:var(--accent2,#4a8c62)}.dra-go:disabled{opacity:.6;cursor:default}'+
+      '.dra-lk{font:inherit;font-size:12px;background:none;border:none;padding:0;color:var(--accent,#2b5c3f);text-decoration:underline;cursor:pointer}'+
+      '.dra-foot{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#6b675b}'+
+      '.dra-other{font-size:12.5px;background:var(--red-bg,#faeaea);border:1px solid var(--red-border,#e8a0a0);border-radius:8px;padding:9px 11px;color:#7a2020;display:flex;gap:10px;align-items:center;justify-content:space-between}'+
+      '.dra-other button{font:inherit;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid var(--red,#b03030);background:#fff;color:var(--red,#b03030);cursor:pointer;white-space:nowrap}'+
+      '.dra-toast{position:fixed;right:24px;bottom:24px;z-index:10001;max-width:360px;background:var(--sidebar,#1e2d22);color:#fff;border-radius:12px;padding:13px 16px;font-family:var(--font-body,"Instrument Sans",sans-serif);font-size:13px;line-height:1.45;box-shadow:0 12px 36px rgba(0,0,0,.25)}'+
+      '@media(max-width:700px){.dra-scrim{align-items:flex-end;padding:0}.dra-box{max-width:none;border-radius:20px 20px 0 0;padding:10px 20px 24px}'+
+      '.dra-box:before{content:"";width:36px;height:4px;border-radius:2px;background:var(--border,#d0cbbe);align-self:center}'+
+      '.dra-ic{display:none}.dra-f input{font-size:16px;padding:10px 12px}.dra-go{min-height:48px;font-size:15px}.dra-toast{left:16px;right:16px;bottom:16px;max-width:none}}';
+    document.head.appendChild(s);
+  }
+  function waitHtml(){
+    if(!labels.length)return '';
+    return '<div class="dra-wait" id="dra-wait"><b>Waiting:</b> '+labels.map(function(l){
+      var i=l.search(/ [A-Z]{4}\s*\d/);return i>0?esc(l.slice(0,i))+' <span>'+esc(l.slice(i+1))+'</span>':esc(l);
+    }).join(', ')+'. '+(labels.length>1?'They are':'It is')+' sent as soon as you sign in.</div>';
+  }
+  function render(){
+    if(!box){
+      css();
+      box=document.createElement('div');box.className='dra-scrim';
+      box.innerHTML='<div class="dra-box" role="dialog" aria-modal="true" aria-labelledby="dra-t">'+
+        '<div class="dra-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e6b3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>'+
+        '<div><h2 id="dra-t">Sign in again to keep working</h2><p>Your DalOS session ended. You were signed out on another device or after an hour without activity. Nothing on this page is lost.</p></div>'+
+        '<div id="dra-wslot"></div>'+
+        '<form class="dra-form" style="display:flex;flex-direction:column;gap:14px" novalidate>'+
+        '<div class="dra-f"><label for="dra-em">Signed in as</label><input id="dra-em" readonly></div>'+
+        '<div class="dra-f"><div class="dra-row"><label for="dra-pw">Password</label><button type="button" class="dra-lk" id="dra-forgot">Forgot password?</button></div>'+
+        '<input id="dra-pw" type="password" autocomplete="current-password" aria-describedby="dra-msg"><div id="dra-msg" aria-live="polite"></div></div>'+
+        '<button type="submit" class="dra-go" id="dra-go">Sign in and continue</button></form>'+
+        '<div id="dra-oslot"></div>'+
+        '<div class="dra-foot"><button type="button" class="dra-lk" id="dra-other">Sign in as someone else</button></div></div>';
+      document.body.appendChild(box);
+      box.querySelector('form').addEventListener('submit',function(e){e.preventDefault();signIn();});
+      box.querySelector('#dra-forgot').addEventListener('click',forgot);
+      box.querySelector('#dra-other').addEventListener('click',function(){
+        box.querySelector('#dra-oslot').innerHTML='<div class="dra-other"><span>This reloads the page. Anything not saved here is lost.</span><button type="button" id="dra-reload">Reload and sign in</button></div>';
+        box.querySelector('#dra-reload').addEventListener('click',function(){
+          user=null;var done=function(){location.reload();};
+          try{supabase.auth.signOut({scope:'local'}).then(done,done);}catch(e){done();}
+        });
+      });
+    }
+    box.querySelector('#dra-em').value=user?(user.name?user.name+' · ':'')+(user.email||''):'';
+    box.querySelector('#dra-wslot').innerHTML=waitHtml();
+    setTimeout(function(){var p=box&&box.querySelector('#dra-pw');if(p)p.focus();},30);
+  }
+  function msg(cls,text){var m=box&&box.querySelector('#dra-msg');if(m){m.className=cls;m.textContent=text;}}
+  function forgot(){
+    if(!user||!user.email)return;
+    supabase.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+window.location.pathname}).then(function(r){
+      if(r&&r.error)msg('dra-err','Could not send the reset email: '+r.error.message);
+      else msg('dra-ok','We sent a reset link to '+user.email+'. Open it in a NEW tab, set a password, then sign in here.');
+    });
+  }
+  function signIn(){
+    var pw=box.querySelector('#dra-pw'),go=box.querySelector('#dra-go');
+    if(!pw.value){pw.classList.add('bad');msg('dra-err','Type your password.');pw.focus();return;}
+    go.disabled=true;go.textContent='Signing in…';pw.classList.remove('bad');msg('','');
+    supabase.auth.signInWithPassword({email:user.email,password:pw.value}).then(function(r){
+      go.disabled=false;go.textContent='Sign in and continue';
+      if(r.error||!r.data||!r.data.session){
+        pw.classList.add('bad');pw.select();
+        var bad=/invalid|credentials/i.test((r.error&&r.error.message)||'');
+        msg('dra-err',(bad?'That password didn’t work. Try again.':'Could not sign in: '+((r.error&&r.error.message)||'unknown error')+'.')+(labels.length?' Your work is still waiting.':''));
+        return;
+      }
+      done(r.data.session.access_token);
+    },function(){go.disabled=false;go.textContent='Sign in and continue';msg('dra-err','No connection. Check the network and try again.');});
+  }
+  function toast(text){
+    css();var t=document.createElement('div');t.className='dra-toast';t.setAttribute('role','status');t.innerHTML=text;
+    document.body.appendChild(t);setTimeout(function(){t.remove();},6000);
+  }
+  function done(token){
+    if(!waiting)return;
+    var w=waiting,n=labels.length;waiting=null;labels=[];
+    if(box){box.remove();box=null;}
+    toast('<b>Signed in again.</b> '+(n?(n>1?'Your waiting actions were':'Your waiting action was')+' sent again.':'You can carry on where you left off.'));
+    w.resolve(token);
+  }
+  function open(label){
+    if(label&&labels.indexOf(label)<0)labels.push(label);
+    if(!waiting){var r;waiting={promise:new Promise(function(res){r=res;})};waiting.resolve=r;}
+    render();
+    return waiting.promise;
+  }
+  function fetchWrap(input,init){
+    var url=typeof input==='string'?input:(input&&input.url)||'';
+    return nativeFetch(input,init).then(function(res){
+      if(res.status!==401||!user||!isApi(url))return res;
+      var h=new Headers((init&&init.headers)||{});
+      return sessionLost(h).then(function(lost){
+        if(!lost)return res;
+        return open(describe(url,init)).then(function(token){
+          h.set('Authorization','Bearer '+token);
+          return nativeFetch(input,Object.assign({},init,{headers:h}));
+        });
+      });
+    });
+  }
+  return {
+    fetch:fetchWrap,
+    /* app tells us who is signed in; null = nobody (login screen, deliberate sign-out) */
+    setUser:function(u){user=u&&u.email?{name:u.name||'',email:u.email}:null;},
+    /* open the box with nothing held (e.g. refresh failed and the session could not be recovered) */
+    open:function(){if(user)open(null);},
+    /* signed in some other way (another tab): release anything held */
+    signedIn:function(session){if(waiting&&session&&session.access_token)done(session.access_token);}
+  };
+})();
+
 var supabase = window.supabase.createClient(
   DALOS_SUPABASE_URL,
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmeWp2Z2p3dnR3a3JucXJ2cXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjYsImV4cCI6MjA5MDQ0ODE2Nn0.FjA75XZsp0Kx5Xam_rrnYoAHX4JHKey6vEFCH_zlMuQ'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmeWp2Z2p3dnR3a3JucXJ2cXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NzIxNjYsImV4cCI6MjA5MDQ0ODE2Nn0.FjA75XZsp0Kx5Xam_rrnYoAHX4JHKey6vEFCH_zlMuQ',
+  {global:{fetch:dalosReauth.fetch}}
 );
 
 /* Shared across ALL DalOS apps (Vision / Analytics / Workspace) — they sit on one
@@ -16200,7 +16459,9 @@ function App(){
     }
     function tick(){
       if(Date.now()-lastActivity()>=IDLE_MS){
-        supabase.auth.signOut().then(function(){ setCurrentUser(null); });
+        /* scope local (2026-11-17): an idle timer must never end the user's sessions on OTHER devices */
+        dalosReauth.setUser(null);
+        supabase.auth.signOut({scope:'local'}).then(function(){ setCurrentUser(null); });
         return; /* stop polling; the effect re-runs when currentUser clears */
       }
       poll=setTimeout(tick,POLL_MS);
@@ -16786,7 +17047,7 @@ function App(){
         setShowPasswordRecovery(true);
       }
       /* Clear the session-expired banner whenever the user successfully signs back in */
-      if(event==='SIGNED_IN'){ setSessionExpired(false); try{window.dispatchEvent(new CustomEvent('dalos:auth-restored'));}catch(e){} }
+      if(event==='SIGNED_IN'){ setSessionExpired(false); dalosReauth.signedIn(session); try{window.dispatchEvent(new CustomEvent('dalos:auth-restored'));}catch(e){} }
       if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&DALOS_IS_INVITE){
         history.replaceState(null,'',window.location.pathname);
         setShowInvite(true);
@@ -16794,6 +17055,7 @@ function App(){
       /* TOKEN_REFRESHED: update the current user silently so UI stays in sync */
       if(event==='TOKEN_REFRESHED'&&session&&session.user){
         console.log('[DalOS] Token refreshed silently — session continues');
+        dalosReauth.signedIn(session);
         try{window.dispatchEvent(new CustomEvent('dalos:auth-restored'));}catch(e){}
       }
       /* SIGNED_OUT: try to recover session from localStorage before logging user out.
@@ -16824,6 +17086,7 @@ function App(){
             } else {
               console.warn('[DalOS] Session could not be recovered after '+_maxRecoveryAttempts+' attempts — showing session-expired banner');
               setSessionExpired(true);
+              dalosReauth.open();
             }
           });
         }
@@ -18048,12 +18311,16 @@ function App(){
     });
   }
   function signOut(){
+    dalosReauth.setUser(null);
     supabase.auth.signOut().then(function(){
       setCurrentUser(null);setCropId(null);setPhId(null);setView('home');
     });
   }
   /* Always read the latest user data from users state so admin edits reflect immediately */
   var liveCurrentUser=currentUser?(function(){var found=users.find(function(u){return u.id===currentUser.id;});return found?Object.assign({},found,{packhouses:currentUser.packhouses}):currentUser;}()):null;
+  dalosReauth.setUser(liveCurrentUser);
+  /* staging-only "View Vision as…" (viewas.js, admins): draw the app as the previewed user; null/absent on prod */
+  if(window.VisionViewAs){var _vas=window.VisionViewAs.userFor(liveCurrentUser);if(_vas)liveCurrentUser=_vas;}
 
 
   /* Show loading spinner while checking auth session */
@@ -18169,7 +18436,7 @@ function App(){
             ce('div',{className:'side-av',style:{width:26,height:26,borderRadius:'50%',background:role.badge,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff',flexShrink:0}},
               liveCurrentUser.name.split(' ').map(function(n){return n[0];}).slice(0,2).join('')),
             ce('div',{style:{overflow:'hidden',flex:1,minWidth:0}},
-              ce('div',{style:{fontSize:12,color:'var(--sidebar-text)',fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},currentUser.name),
+              ce('div',{style:{fontSize:12,color:'var(--sidebar-text)',fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},liveCurrentUser.name),
               ce('div',{style:{fontSize:10,color:'var(--sidebar-muted)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}},role.label,
                 VISION_GLASS&&ce('span',{'aria-hidden':'true',style:{opacity:.5}},'\u00b7'),
                 VISION_GLASS&&ce('button',{type:'button',className:'side-look',title:'Switch between the new Glass look and the classic look (this browser only)',onClick:visionGlassToggle},
@@ -18207,7 +18474,8 @@ function App(){
   if(needsCropPH){
     /* Session-expired overlay — shown when recovery fails after SIGNED_OUT.
      The tab is kept alive so no form data is lost. User signs in on a new tab. */
-  var sessionExpiredOverlay=sessionExpired&&ce('div',{style:{
+  /* Replaced 2026-11-17 by the sign-in-again box (dalosReauth), which signs in on this page. */
+  var sessionExpiredOverlay=false&&sessionExpired&&ce('div',{style:{
     position:'fixed',top:0,left:0,right:0,bottom:0,
     background:'rgba(10,20,14,0.82)',zIndex:9999,
     display:'flex',alignItems:'center',justifyContent:'center',padding:24
@@ -18282,7 +18550,7 @@ function App(){
           navBackLabel:cqcLink?'Back to Shipments':(navHistory?'Back to CQC report':null)}),
         view==='analytics'  &&perms.viewAnalytics &&ce(AnalyticsView,{config:config}),
         view==='export'     &&perms.viewExport    &&ce(ExportView,{phId:phId,config:config}),
-        view==='shipments'  &&perms.viewShipments &&ce(ShipmentsMgmt,{config:config,currentUser:liveCurrentUser,initialShip:shipReturn,onOpenCqc:function(repId,prodId,shipState){visionSaveScroll('view:shipments');setCqcLink({rep:repId,prod:prodId,ship:shipState||null});setView('clientqc');}}),
+        view==='shipments'  &&perms.viewShipments &&ce(ShipmentsMgmt,{config:config,perms:perms,currentUser:liveCurrentUser,initialShip:shipReturn,onOpenCqc:function(repId,prodId,shipState){visionSaveScroll('view:shipments');setCqcLink({rep:repId,prod:prodId,ship:shipState||null});setView('clientqc');}}),
         view==='clientqc'   &&perms.viewClientQC  &&ce(ClientQCMgmt,{batches:batches,config:config,setConfig:setConfig,perms:perms,currentUser:liveCurrentUser,
           initialProd:navHistory&&navHistory.view==='clientqc'?navHistory.selCqcProd:(cqcLink?cqcLink.prod:null),
           initialSelRep:navHistory&&navHistory.view==='clientqc'?navHistory.selRep:(cqcLink?cqcLink.rep:null),

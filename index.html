@@ -919,6 +919,11 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;box-sizing:border-b
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8"></script>
 <!-- Pivots line (Potatoes) lives in pivots.js so potato fixes never touch this file -->
 <script src="pivots.js?v=b3ac275641"></script>
+<script src="shipments_lists.js?v=f0765b5414"></script>
+<script src="shipments_lists_config.js?v=5f9f715025"></script>
+<script src="shipments_lists_queue.js?v=00da840f13"></script>
+<script src="shipments_pt_suggest.js?v=08b8bc5b8b"></script>
+<script src="shipments_ref_options.js?v=ced4fd185a"></script>
 
 <script>
 /* Config that differs between staging and prod lives HERE, not in vision.js (vision.js is identical on both). */
@@ -929,8 +934,17 @@ var DALOS_BUILD='v1.7'/*BUILD*/;var DALOS_BUILD_INFO=''/*BUILD_INFO*/; /* PROD: 
    for this browser and then removed from the address, so the in-app toggle is never pinned by an old link. */
 var VISION_IS_DEV=/\/dalos-vision-dev\//.test(location.pathname)||/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 var VISION_DEFAULT_ON=true/*prod 2026-10: redesign ON by default (Tarek); ?theme=classic / ?home=dark / ?scroll=old / ?mobile=old still opt out per browser*/;
+/* Shipments (promoted 2026-11-26). PROD values: the new intake layout and the managed dropdown lists are ON;
+   Other crops, Potatoes managed lists, Potatoes "Not in list?" and the citrus sales Region stay OFF (staging only —
+   their scripts also check VISION_IS_DEV, which is false here). */
+var SV2_INTAKE_ENABLED=true;
+var SV2_LISTS_ENABLED=true;
+var SV2_OTHER_CROPS_ENABLED=false;
+var SV2_PT_LISTS_ENABLED=false;
+var SV2_PT_SUGGEST_ENABLED=false;
+var SV2_SALES_REGION_ENABLED=false;
 </script>
-<script src="vision.js?v=a2fe76e7d8"></script>
+<script src="vision.js?v=5718a369ad"></script>
 <script>
 /* Fade the entry splash once the app shell first paints (React commits to #root),
    with a hard fallback so it can never stick. */
