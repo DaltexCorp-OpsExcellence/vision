@@ -14410,14 +14410,34 @@ function CqcPreviewModal(props){
 /* Other crops (Vera 2026-11-23): flag-gated Shipments product. ON only when index.html sets SV2_OTHER_CROPS_ENABLED=true AND this is
    the staging host (VISION_IS_DEV); the prod address resolves OFF. Same check as shipments_v2.js.
    The products row is inactive (active=false) until a separate yes, so config.products never lists it: it is added here. */
-var OC_PRODUCT={id:'other_crops',name:'(Pivot) Other Crops',color:'#b5651d',active:true};
+var OC_PRODUCT={id:'other_crops',name:'(Pivot) Other Crops',color:'#2e7d46',active:true};
+/* 2026-11-27 (Tarek): Shipments shows Other crops as one entry per crop (Configurations > Crop list, ref_options
+   other_crops/crop, active). Entry id 'oc:<CROP_CODE>'; the data stays product other_crops and the Manage list is
+   filtered to that crop (shipments_v2.js opts.cropCode, crop set + locked on new shipments). Green accent. */
+var OC_CROP_COLOR='#2e7d46',OC_CROPS_CACHE=null,OC_CROPS_FLIGHT=null;
+function isOcCrop(id){return typeof id==='string'&&id.indexOf('oc:')===0;}
+function ocCropCode(id){return isOcCrop(id)?id.slice(3):'';}
+function ocBaseProduct(id){return isOcCrop(id)?'other_crops':id;}
+function ocLoadCrops(){
+  if(OC_CROPS_CACHE)return Promise.resolve(OC_CROPS_CACHE);if(OC_CROPS_FLIGHT)return OC_CROPS_FLIGHT;
+  OC_CROPS_FLIGHT=Promise.resolve(supabase.from('ref_options').select('code,label_ar,label_en,sort_order').eq('product_id','other_crops').eq('list_key','crop').eq('active',true).order('sort_order'))
+    .then(function(r){OC_CROPS_FLIGHT=null;
+      if(r&&!r.error&&r.data&&r.data.length)OC_CROPS_CACHE=r.data.map(function(o){return {id:'oc:'+o.code,code:o.code,name:o.label_en||o.label_ar||o.code,ar:o.label_ar||'',color:OC_CROP_COLOR,active:true,crop:o.code};});
+      return OC_CROPS_CACHE;},function(){OC_CROPS_FLIGHT=null;return null;});
+  return OC_CROPS_FLIGHT;}
+function useOcCrops(){var st=useState(OC_CROPS_CACHE);
+  React.useEffect(function(){if(!otherCropsOn()||OC_CROPS_CACHE)return;var alive=true;ocLoadCrops().then(function(c){if(alive&&c)st[1](c);});return function(){alive=false;};},[]);
+  return st[0];}
+/* product list for Shipments: the single Other crops entry becomes one entry per crop once the crop list has loaded */
+function ocWithCrops(prods,crops){if(!otherCropsOn())return prods;var p=prods.filter(function(x){return x.id!=='other_crops';});return p.concat(crops&&crops.length?crops:[OC_PRODUCT]);}
+function ocProductObj(id){return (OC_CROPS_CACHE||[]).find(function(c){return c.id===id;})||null;}
 function otherCropsOn(){return window.SV2_OTHER_CROPS_ENABLED===true;}   /* 2026-11-26 (Tarek): index.html decides; staging = VISION_IS_DEV, prod sets it explicitly */
 var _shipV2Load=null;
 function loadShipV2(){
   if(window.ShipV2)return Promise.resolve(window.ShipV2);
   if(_shipV2Load)return _shipV2Load;
   _shipV2Load=new Promise(function(res,rej){var s=document.createElement('script');
-    s.src='shipments_v2.js?v=9107ba94e8';   /* ?v= = content hash, stamped by tools/stamp-assets.py */
+    s.src='shipments_v2.js?v=1231fce09f';   /* ?v= = content hash, stamped by tools/stamp-assets.py */
     s.onload=function(){if(window.ShipV2)res(window.ShipV2);else{_shipV2Load=null;rej(new Error('The Manage tool did not start.'));}};
     s.onerror=function(){_shipV2Load=null;rej(new Error('Could not load the Manage tool. Check the connection.'));};
     document.head.appendChild(s);});
@@ -14431,7 +14451,7 @@ function ShipV2Host(props){
     var alive=true;setErr('');
     loadShipV2().then(function(SV){
       if(!alive||!ref.current)return;
-      api.current=SV.mount(ref.current,{sb:supabase,product:props.product,productName:props.productName,productColor:props.productColor,
+      api.current=SV.mount(ref.current,{sb:supabase,product:props.product,productName:props.productName,productColor:props.productColor,cropCode:props.cropCode||'',
         seasonId:props.seasonId,seasonName:props.seasonName,trueActiveSeasonId:props.trueActiveSeasonId,trueActiveSeasonName:props.trueActiveSeasonName,
         canConfigure:!!props.canConfigure,readOnly:!!props.readOnly});
       if(props.apiRef)props.apiRef.current=api.current;
@@ -14439,7 +14459,7 @@ function ShipV2Host(props){
     var g=function(){return !api.current||api.current.confirmLeave();};visionCrumbGuard=g;
     return function(){alive=false;if(visionCrumbGuard===g)visionCrumbGuard=null;
       if(api.current){api.current.unmount();api.current=null;}if(props.apiRef)props.apiRef.current=null;};
-  },[props.product,props.seasonId,props.readOnly,tick]);
+  },[props.product,props.cropCode,props.seasonId,props.readOnly,tick]);
   if(err)return ce(VisionLoadError,{title:'Manage didn\u2019t load',detail:err,pad:40,onRetry:function(){setTick(function(t){return t+1;});}});
   return ce('div',{ref:ref});
 }
@@ -14451,20 +14471,32 @@ function ShipV2Host(props){
    Guard: VISION_IS_DEV only, so the prod address keeps the old product cards (below, unchanged) until approved. */
 function shipLandingOn(){return window.SV2_SHIP_LANDING_ENABLED===true||window.VISION_IS_DEV===true;}   /* 2026-11-26 (Tarek): prod turns it on with index.html SV2_SHIP_LANDING_ENABLED=true */
 var SV2L_ORDER=['citrus','grapes','pomegranate','mango','berries','potatoes','other_crops'];
+var SV2L_LINES=[
+  {id:'orchards',en:'Orchards',ar:'بساتين',icon:'<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="15" r="10" fill="currentColor" opacity=".18"/><circle cx="14" cy="17" r="6" fill="currentColor" opacity=".35"/><circle cx="25" cy="13" r="6" fill="currentColor" opacity=".35"/><rect x="18.5" y="22" width="3" height="12" rx="1.5" fill="currentColor"/><path d="M8 34h24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'},
+  {id:'pivots',en:'Pivots',ar:'ري محوري',icon:'<svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="15" fill="currentColor" opacity=".16"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".6"/><path d="M20 20L31 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="currentColor"/></svg>'}];
 var SV2L_AR={citrus:'موالح',grapes:'عنب',pomegranate:'رمان',mango:'مانجو',berries:'توت',potatoes:'بطاطس',other_crops:'محاصيل أخرى',olives:'زيتون'};
 /* products whose records page is Manage (same list as ShipmentsMgmt.manageProduct); only these have the overview read */
-function sv2lHasOverview(id){return ['citrus','grapes','mango','pomegranate','potatoes'].indexOf(id)>=0||(id==='other_crops'&&otherCropsOn());}
+function sv2lHasOverview(id){return ['citrus','grapes','mango','pomegranate','potatoes'].indexOf(id)>=0||((id==='other_crops'||isOcCrop(id))&&otherCropsOn());}
 /* static fruit art (no data inside) — inline SVG from the mockup */
 var SV2L_FRUIT={
  citrus:'<circle cx="50" cy="54" r="38" fill="#f59a1f"/><circle cx="50" cy="54" r="31" fill="#ffc25c"/><g stroke="#fff3d6" stroke-width="3"><line x1="50" y1="23" x2="50" y2="85"/><line x1="50" y1="23" x2="50" y2="85" transform="rotate(45 50 54)"/><line x1="50" y1="23" x2="50" y2="85" transform="rotate(90 50 54)"/><line x1="50" y1="23" x2="50" y2="85" transform="rotate(135 50 54)"/></g><circle cx="50" cy="54" r="5" fill="#fff3d6"/><path d="M58 14c10-8 22-6 26 0-8 8-20 8-26 0z" fill="#3c8a4f"/>',
  grapes:'<path d="M50 8v14" stroke="#5b3a1a" stroke-width="4"/><path d="M52 14c10-8 22-4 24 4-10 4-18 2-24-4z" fill="#4c9a52"/>'+[[38,30],[52,30],[66,30],[31,44],[45,44],[59,44],[73,44],[38,58],[52,58],[66,58],[45,72],[59,72],[52,86]].map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="9" fill="#7b4fc4"/><circle cx="'+(p[0]-3)+'" cy="'+(p[1]-3)+'" r="2.5" fill="#c9b2f0"/>';}).join(''),
  mango:'<defs><linearGradient id="sv2l-mg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd23f"/><stop offset=".6" stop-color="#f59a1f"/><stop offset="1" stop-color="#d9452b"/></linearGradient></defs><ellipse cx="50" cy="56" rx="30" ry="38" fill="url(#sv2l-mg)" transform="rotate(-28 50 56)"/><path d="M58 18c8-10 24-10 30-2-10 8-22 8-30 2z" fill="#3c8a4f"/><ellipse cx="40" cy="44" rx="6" ry="12" fill="#fff" opacity=".35" transform="rotate(-28 40 44)"/>',
  pomegranate:'<circle cx="50" cy="56" r="36" fill="#c63a4f"/><path d="M40 24l4-12 6 8 6-8 4 12z" fill="#9e2337"/><circle cx="38" cy="46" r="8" fill="#fff" opacity=".25"/><g fill="#ff8fa0" opacity=".7"><circle cx="52" cy="60" r="3"/><circle cx="60" cy="68" r="3"/><circle cx="44" cy="70" r="3"/><circle cx="62" cy="52" r="3"/></g>',
- berries:'<path d="M50 90C24 70 18 44 30 34c8-6 14-4 20 0 6-4 12-6 20 0 12 10 6 36-20 56z" fill="#d6304f"/><path d="M34 30l16 6 16-6-8-10-8 6-8-6z" fill="#3c8a4f"/><g fill="#ffe08a"><ellipse cx="40" cy="48" rx="1.6" ry="2.6"/><ellipse cx="56" cy="46" rx="1.6" ry="2.6"/><ellipse cx="48" cy="58" rx="1.6" ry="2.6"/><ellipse cx="38" cy="64" rx="1.6" ry="2.6"/><ellipse cx="60" cy="62" rx="1.6" ry="2.6"/><ellipse cx="50" cy="74" rx="1.6" ry="2.6"/></g>',
+ berries:'<path d="M10 16C30 22 46 34 58 54" stroke="#7a5a32" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M22 20c2-12 14-16 22-12-2 10-12 14-22 12z" fill="#4c9a52"/><path d="M36 30c10-6 22-2 24 6-10 4-20 2-24-6z" fill="#3c8a4f"/><path d="M44 40l-6 10M52 46l10 4M58 54l-4 12" stroke="#7a5a32" stroke-width="2.5" stroke-linecap="round"/><circle cx="32" cy="60" r="15" fill="#5b7fd1"/><circle cx="34.2" cy="57.8" r="4.2" fill="#1d2a55"/><circle cx="25.2" cy="64.5" r="3.3" fill="#fff" opacity=".35"/><circle cx="68" cy="56" r="14" fill="#3f5fb8"/><circle cx="70.1" cy="53.9" r="3.9" fill="#1d2a55"/><circle cx="61.7" cy="60.2" r="3.1" fill="#fff" opacity=".35"/><circle cx="52" cy="80" r="15" fill="#4a6cc4"/><circle cx="54.2" cy="77.8" r="4.2" fill="#1d2a55"/><circle cx="45.2" cy="84.5" r="3.3" fill="#fff" opacity=".35"/>',
+ olives:'<path d="M14 34C32 22 60 20 88 30" stroke="#6b5a2e" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M28 30c-8-8-6-18 2-22 6 8 4 18-2 22z" fill="#7a9a4a"/><path d="M70 26c4-10 14-14 22-10-4 8-12 12-22 10z" fill="#8aab58"/><path d="M52 24c-2-10 4-16 12-16 0 8-4 14-12 16z" fill="#6f8f42"/><path d="M42 30v8M64 28v8" stroke="#6b5a2e" stroke-width="3" stroke-linecap="round"/><ellipse cx="40" cy="60" rx="15" ry="21" fill="#5d7431" transform="rotate(-14 40 60)"/><ellipse cx="66" cy="58" rx="14" ry="20" fill="#34401d" transform="rotate(14 66 58)"/><ellipse cx="35" cy="52" rx="4" ry="7" fill="#fff" opacity=".3" transform="rotate(-14 35 52)"/><ellipse cx="61" cy="50" rx="3.5" ry="6" fill="#fff" opacity=".22" transform="rotate(14 61 50)"/>',
  potatoes:'<ellipse cx="40" cy="58" rx="28" ry="22" fill="#c49a5e" transform="rotate(-12 40 58)"/><ellipse cx="64" cy="50" rx="22" ry="17" fill="#b0844a" transform="rotate(18 64 50)"/><g fill="#7a5528"><circle cx="30" cy="54" r="2"/><circle cx="44" cy="66" r="2"/><circle cx="38" cy="48" r="2"/><circle cx="66" cy="46" r="2"/><circle cx="70" cy="56" r="2"/></g>',
+ sweet_potato:'<path d="M12 62C14 46 34 34 56 32c18-2 30 6 32 16 2 12-12 24-32 28-22 4-46 2-44-14z" fill="#b5523b"/><path d="M84 44l10-6" stroke="#8a3b29" stroke-width="3" stroke-linecap="round"/><path d="M14 64l-8 4" stroke="#8a3b29" stroke-width="3" stroke-linecap="round"/><ellipse cx="44" cy="44" rx="14" ry="5" fill="#fff" opacity=".25" transform="rotate(-10 44 44)"/><g fill="#7e3424"><circle cx="34" cy="58" r="1.8"/><circle cx="52" cy="54" r="1.8"/><circle cx="66" cy="48" r="1.8"/><circle cx="58" cy="64" r="1.8"/></g>',
+ butternut:'<rect x="46" y="6" width="8" height="10" rx="2" fill="#6b4a22"/><path d="M42 16h16c0 12 4 18 10 26 8 10 12 18 12 28 0 14-13 22-30 22S20 84 20 70c0-10 4-18 12-28 6-8 10-14 10-26z" fill="#e8b25e"/><ellipse cx="50" cy="72" rx="14" ry="10" fill="#d99a42"/><ellipse cx="40" cy="38" rx="4" ry="12" fill="#fff" opacity=".3"/>',
+ onion:'<path d="M50 10c3 12 32 22 32 48 0 18-14 30-32 30S18 76 18 58c0-26 29-36 32-48z" fill="#c9823a"/><path d="M50 18c-6 14-18 24-18 42M50 18c6 14 18 24 18 42M50 18v68" stroke="#a5652a" stroke-width="2" fill="none"/><path d="M44 88l-4 6M50 88v7M56 88l4 6" stroke="#e9d3b0" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="36" cy="54" rx="5" ry="12" fill="#fff" opacity=".25"/>',
+ carrot:'<path d="M38 30l24 0-10 62c-1 4-3 4-4 0z" fill="#f27a1a"/><g stroke="#c95f10" stroke-width="2" stroke-linecap="round"><path d="M44 44h8M46 58h6M48 72h4"/></g><path d="M50 30c-6-10-14-18-22-20 2 10 10 18 22 20zM50 30c0-12 4-20 10-24 2 10-2 18-10 24zM50 30c6-8 16-12 24-10-4 8-14 12-24 10z" fill="#3c8a4f"/>',
+ broccoli:'<path d="M44 58h12l4 34H40z" fill="#8fc46a"/><g fill="#3f8f4e"><circle cx="32" cy="46" r="14"/><circle cx="50" cy="34" r="16"/><circle cx="68" cy="46" r="14"/><circle cx="42" cy="56" r="11"/><circle cx="58" cy="56" r="11"/></g><g fill="#2f7340"><circle cx="46" cy="30" r="3"/><circle cx="58" cy="38" r="3"/><circle cx="30" cy="44" r="3"/><circle cx="70" cy="48" r="3"/></g>',
+ garlic:'<path d="M50 10c2 6 6 10 8 14 14 6 24 18 24 34 0 18-14 30-32 30S18 76 18 58c0-16 10-28 24-34 2-4 6-8 8-14z" fill="#f4efe6" stroke="#d8cfc0" stroke-width="2"/><path d="M50 26v60M36 34c-6 14-6 34 4 50M64 34c6 14 6 34-4 50" stroke="#d8cfc0" stroke-width="2" fill="none"/><path d="M42 88l-2 5M50 88v6M58 88l2 5" stroke="#c9b9a0" stroke-width="2" stroke-linecap="round"/>',
+ radish:'<path d="M50 38c-4-10-12-20-22-24 0 12 10 22 22 24zM50 38c0-12 4-24 14-30 2 12-4 24-14 30z" fill="#3c8a4f"/><circle cx="50" cy="60" r="24" fill="#d9324c"/><path d="M50 84v12" stroke="#f3e6e8" stroke-width="3" stroke-linecap="round"/><ellipse cx="42" cy="52" rx="6" ry="9" fill="#fff" opacity=".3"/><path d="M40 76c6 6 14 6 20 0" stroke="#f3e6e8" stroke-width="3" fill="none"/>',
  other_crops:'<path d="M50 90V44" stroke="#2f6b45" stroke-width="5"/><path d="M50 56C28 56 18 40 20 24c18 0 30 12 30 32z" fill="#4fae74"/><path d="M50 48c0-22 12-34 32-34 2 18-10 34-32 34z" fill="#3f9a6a"/><path d="M50 72c-14 0-22-8-24-18 12-2 22 4 24 18z" fill="#6cc48f"/>'
 };
-function sv2lFruit(id){return '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">'+(SV2L_FRUIT[id]||SV2L_FRUIT.other_crops)+'</svg>';}
+var OC_ICON={CROP_SWEET_POTATO:'sweet_potato',CROP_BUTTERNUT:'butternut',CROP_ONION:'onion',CROP_CARROT:'carrot',CROP_BROCCOLI:'broccoli',CROP_GARLIC:'garlic',CROP_RADISH:'radish'};
+function sv2lFruit(id){var k=isOcCrop(id)?(OC_ICON[ocCropCode(id)]||'other_crops'):id;return '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">'+(SV2L_FRUIT[k]||SV2L_FRUIT.other_crops)+'</svg>';}
 /* Cairo calendar date (YYYY-MM-DD) and HH:MM */
 function sv2lCairoDate(d){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}catch(e){return d.toISOString().slice(0,10);}}
 function sv2lCairoTime(d){try{return new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);}catch(e){return '';}}
@@ -14492,12 +14524,22 @@ function sv2lSummarise(containers){
   var latest=containers.slice(0,4).map(function(c){var h=c.hdr||{};return {ref:c.ref||'',loaded:h.loaded||'',region:h.region||'',status:h.status||''};});
   return {n:containers.length,wk:wk,net:net,weeks:weeks,top:top,latest:latest};
 }
+/* raw containers of one base product + season, shared by the crop entries (one edge-function call for all crops) */
+var SV2L_RAW={};
+function sv2lFetch(seasonId,base,force){
+  var key=seasonId+'|'+base;if(!force&&SV2L_RAW[key])return SV2L_RAW[key];
+  var path='citrus-shipments?product='+encodeURIComponent(base)+(seasonId?'&season='+encodeURIComponent(seasonId):'');
+  var p=Promise.resolve(supabase.functions.invoke(path,{method:'GET'}));
+  p.then(function(res){if(res&&res.error)delete SV2L_RAW[key];},function(){delete SV2L_RAW[key];});
+  SV2L_RAW[key]=p;return p;
+}
 function sv2lLoad(seasonId,prodId,force){
   var key=seasonId+'|'+prodId;
   if(!force&&SV2L_CACHE[key])return Promise.resolve(SV2L_CACHE[key]);
   if(SV2L_FLIGHT[key])return SV2L_FLIGHT[key];
-  var path='citrus-shipments?product='+encodeURIComponent(prodId)+(seasonId?'&season='+encodeURIComponent(seasonId):'');
-  var p=Promise.resolve(supabase.functions.invoke(path,{method:'GET'})).then(function(res){
+  var crop=ocCropCode(prodId);
+  var p=sv2lFetch(seasonId,ocBaseProduct(prodId),force).then(function(res){
+    if(crop&&res&&!res.error&&res.data)res={data:{containers:(res.data.containers||[]).filter(function(c){return (c.hdr||{}).crop===crop;})}};
     var out;
     if(res&&res.error){var st=res.error.context&&res.error.context.status;
       /* 403 = this account can't read this product's shipments: hide the overview, don't show an error */
@@ -14526,12 +14568,35 @@ function sv2lEnsureCss(){
   if(document.getElementById('sv2l-css'))return;
   var s=document.createElement('style');s.id='sv2l-css';
   s.textContent=[
-'.sv2l{--sv2l-ink:var(--text,#1a1a17);padding:20px 28px calc(var(--sv2l-pad,0px) + 40px);max-width:1360px;margin:0 auto;color:var(--sv2l-ink)}',
+'.sv2l{--sv2l-ink:var(--text,#1a1a17);padding:6px 28px 16px;max-width:1360px;margin:0 auto;color:var(--sv2l-ink)}',
 '.sv2l :focus-visible{outline:3px solid #1b6ef3;outline-offset:3px}',
-'.sv2l-hd{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;margin:0 0 14px}',
+'.sv2l-hd{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;margin:0 0 8px}',
 '.sv2l-hd h1{font-family:var(--font-display);font-weight:400;font-size:30px;margin:0;line-height:1.15}',
 '.sv2l-hd p{margin:0;color:var(--text2);font-size:14px}',
 '.sv2l-stripw{position:relative;margin:0 0 8px}',
+'.sv2l-pick{max-width:640px;margin:2vh auto 0;display:flex;flex-direction:column;gap:14px}',
+'.sv2l-pickhd{text-align:center}.sv2l-pickhd h1{font-family:var(--font-display);font-weight:400;font-size:30px;margin:0;line-height:1.15}.sv2l-pickhd p{margin:4px 0 0;color:var(--text2);font-size:14px}',
+'.sv2l-stp{grid-template-columns:repeat(2,minmax(0,1fr))}',
+'.sv2l-stepw{max-width:640px;margin:0 0 4px}',
+'.sv2l-lines{display:flex;flex-direction:column;gap:12px}',
+'.sv2l-lcard{width:100%;padding:20px 22px;animation:sv2lIn .35s cubic-bezier(.2,.7,.2,1) both}',
+'.sv2l-lcard .lg-hint{margin-top:2px}',
+'.sv2l-go{font-size:20px;color:var(--lc);opacity:0;transform:translateX(-6px);transition:opacity .2s,transform .2s}',
+'.sv2l-lcard:hover .sv2l-go,.sv2l-lcard:focus-visible .sv2l-go,.sv2l-lcard.picked .sv2l-go{opacity:1;transform:none}',
+'.sv2l-lcard.picked{transform:scale(1.02);box-shadow:0 0 0 2px var(--lc),0 14px 34px rgba(30,45,34,.18);transition:transform .25s,box-shadow .25s}',
+'.sv2l-lcard.away{opacity:0;transform:translateY(8px) scale(.98);transition:opacity .22s,transform .22s}',
+'.sv2l-lcard:disabled{cursor:default}',
+'.sv2l-enter{animation:sv2lStep .38s cubic-bezier(.2,.7,.2,1) both}',
+'@keyframes sv2lIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}',
+'@keyframes sv2lStep{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}',
+'.sv2l-strip.rows{display:flex;flex-direction:column;gap:2px;overflow:visible;scroll-snap-type:none;padding:6px 4px 10px}',
+'.sv2l-prow{display:flex;align-items:center;gap:10px}',
+'.sv2l-prow+.sv2l-prow{border-top:1px dashed var(--border2,rgba(0,0,0,.14));padding-top:6px}',
+'.sv2l-rowlab{flex:0 0 76px;display:flex;flex-direction:column;gap:2px}',
+'.sv2l-rowlab b{font-family:var(--font-display);font-weight:400;font-size:18px;line-height:1.1}',
+'.sv2l-rowlab span{font-size:13px;color:var(--text2)}',
+'.sv2l-bubs{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;flex:1}',
+'.sv2l-bubs .sv2l-chip{width:92px}',
 '.sv2l-strip{display:flex;gap:14px;padding:6px 4px 14px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}',
 '.sv2l-strip::-webkit-scrollbar{display:none}',
 '.sv2l-chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;padding:4px;cursor:pointer;width:108px;min-height:44px;border-radius:14px;color:var(--sv2l-ink);font-family:inherit;scroll-snap-align:start}',
@@ -14593,12 +14658,15 @@ function sv2lEnsureCss(){
 '@media(max-width:760px){.sv2l{padding:14px 12px calc(var(--sv2l-pad,0px) + 32px)}',
 ' .sv2l-hd h1{font-size:24px}.sv2l-hd p{font-size:12.5px;flex-basis:100%}',
 ' .sv2l-strip{gap:4px;margin:0 -12px;padding:6px 12px 12px}',
+ ' .sv2l-pick{margin-top:8px}.sv2l-lcard{padding:16px}.sv2l-go{display:none}',
+ ' .sv2l-prow{flex-direction:column;align-items:stretch;gap:2px}.sv2l-rowlab{flex:none;flex-direction:row;align-items:baseline;gap:8px;padding:0 2px}.sv2l-rowlab b{font-size:16px}',
+ ' .sv2l-bubs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:4px}.sv2l-bubs::-webkit-scrollbar{display:none}.sv2l-bubs .sv2l-chip{width:80px}',
 ' .sv2l-chip{width:80px}.sv2l-ring{width:66px;height:66px;padding:4px}.sv2l-chip[aria-selected=true] .sv2l-ring{padding:5px}.sv2l-chip b{font-size:12px}.sv2l-chip .sv2l-ar{font-size:12px}',
 ' .sv2l-card{padding:14px;border-radius:16px}',
 ' .sv2l-ttl h2{font-size:24px}.sv2l-ttl .sv2l-ar{font-size:16px}.sv2l-live{margin-left:0;flex-basis:100%}',
 ' .sv2l-kpis{grid-template-columns:1fr 1fr;gap:8px}.sv2l-kpi b{font-size:22px}',
 ' .sv2l-cta{width:100%}}',
-'@media(prefers-reduced-motion:reduce){.sv2l-ring{transition:none}.sv2l-sk,.sv2l-cnt.sk{animation:none}}'
+'@media(prefers-reduced-motion:reduce){.sv2l-lcard,.sv2l-enter{animation:none}.sv2l-ring{transition:none}.sv2l-sk,.sv2l-cnt.sk{animation:none}}'
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -14614,12 +14682,27 @@ function sv2lBars(sum,narrow,c,d,name){
   return ce('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':name+' shipments per week, last 13 weeks: '+ws.map(function(w){return w.label+' '+w.n;}).join(', ')},kids);
 }
 function ShipLanding(props){
+  var ocCrops=useOcCrops();
   var config=props.config||{},counts=props.prodCounts||{},seasonId=config.activeSeasonId;
   var seasonName=((config.seasons||[]).find(function(x){return x.id===seasonId;})||{}).name||'';
   var prods=(config.products||[]).filter(function(p){return p.active!==false;});
-  if(otherCropsOn()&&!prods.some(function(p){return p.id==='other_crops';}))prods=prods.concat([OC_PRODUCT]);   /* same visibility as the old cards */
-  prods=prods.slice().sort(function(a,b){var ia=SV2L_ORDER.indexOf(a.id),ib=SV2L_ORDER.indexOf(b.id);return (ia<0?99:ia)-(ib<0?99:ib);});
+  prods=ocWithCrops(prods,ocCrops);   /* Other crops = one bubble per crop (same visibility as the old cards) */
+  var ocIx=SV2L_ORDER.indexOf('other_crops');function ordKey(p,i){if(isOcCrop(p.id))return ocIx+(i+1)/1000;var k=SV2L_ORDER.indexOf(p.id);return k<0?99:k;}
+  prods=prods.map(function(p,i){return {p:p,k:ordKey(p,i)};}).sort(function(a,b){return a.k-b.k;}).map(function(x){return x.p;});
   var sSel=useState(function(){try{return localStorage.getItem('sv2_landing_product')||null;}catch(e){return null;}}),sel=sSel[0],setSel=sSel[1];
+  /* 2026-11-27 (Tarek): step 1 = pick a line (Orchards / Pivots) like Export Inspection; step 2 = that line's bubbles + overview. Line remembered. */
+  var sLine=useState(function(){try{var v=localStorage.getItem('sv2_landing_line');return v==='orchards'||v==='pivots'?v:null;}catch(e){return null;}}),lineRaw=sLine[0],setLineRaw=sLine[1];
+  var allProds=prods;
+  function lineOfProd(id){return isPivot(id)?'pivots':'orchards';}
+  var line=lineRaw&&allProds.some(function(p){return lineOfProd(p.id)===lineRaw;})?lineRaw:null;
+  function setLine(v){setLineRaw(v);try{if(v)localStorage.setItem('sv2_landing_line',v);else localStorage.removeItem('sv2_landing_line');}catch(e){}}
+  prods=line?allProds.filter(function(p){return lineOfProd(p.id)===line;}):[];
+  /* picking a line: the chosen card lifts while the other fades, then step 2 slides in (skipped with reduced motion) */
+  var sGo=useState(null),going=sGo[0],setGoing=sGo[1];
+  function chooseLine(id){
+    var calm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(calm){setLine(id);return;}
+    setGoing(id);setTimeout(function(){setGoing(null);setLine(id);},260);}
   var sFocus=useState(null),focusId=sFocus[0],setFocusId=sFocus[1];
   var sData=useState(null),data=sData[0],setData=sData[1];
   var sTick=useState(0),tick=sTick[0],setTick=sTick[1];
@@ -14642,6 +14725,7 @@ function ShipLanding(props){
   function moreHint(){var s=stripRef.current;if(!s)return;var m=s.scrollWidth-s.clientWidth;setMore(m>2&&s.scrollLeft<m-2);}
   React.useEffect(moreHint,[prods.length,narrow]);
   /* selection: the user's pick (also remembered) if still listed, else the product with most shipments once counted */
+  prods=prods.filter(function(p){return !(p.id==='potatoes'||p.id==='other_crops'||isOcCrop(p.id));}).concat(prods.filter(function(p){return p.id==='potatoes'||p.id==='other_crops'||isOcCrop(p.id);}));   /* row order */
   var ids=prods.map(function(p){return p.id;});
   var allCounted=prods.every(function(p){return counts[p.id]!==undefined;});
   var mx=Math.max.apply(null,prods.map(function(p){return +counts[p.id]||0;}).concat([0]));
@@ -14668,11 +14752,10 @@ function ShipLanding(props){
   var tabStop=ids.indexOf(focusId)>=0?focusId:(cur||ids[0]);
   function colors(p){var c=(p&&p.color)||'#2b5c3f';return {'--c':c,'--d':'color-mix(in srgb,'+c+' 62%,#000)'};}
 
-  var strip=ce('div',{className:'sv2l-stripw'+(more?' more':'')},
-    ce('div',{className:'sv2l-strip',role:'tablist','aria-label':'Products',ref:stripRef,onKeyDown:onKey,onScroll:moreHint,
-        onBlur:function(e){if(!stripRef.current||!stripRef.current.contains(e.relatedTarget))setFocusId(null);}},   /* Tab back in lands on the selected bubble */
-      prods.map(function(p){
-        var n=counts[p.id],has=+n>0,on=p.id===cur,ar=SV2L_AR[p.id]||'';
+  /* 2026-11-27 (Tarek): two rows, Orchards then Pivots (Potatoes + one bubble per Other crops crop); nothing scrolls sideways on desktop */
+  function isPivot(id){return id==='potatoes'||id==='other_crops'||isOcCrop(id);}
+  function chip(p){
+        var n=counts[p.id],has=+n>0,on=p.id===cur,ar=SV2L_AR[p.id]||p.ar||'';
         return ce('button',{key:p.id,id:'sv2l-tab-'+p.id,type:'button',role:'tab','aria-selected':on?'true':'false','aria-controls':'sv2l-panel',tabIndex:p.id===tabStop?0:-1,
             className:'sv2l-chip'+(n===0?' empty':''),style:colors(p),onClick:function(){setFocusId(p.id);pick(p.id);},onFocus:function(){setFocusId(p.id);},
             'aria-label':(p.name||p.id)+(n===undefined?', loading':n===null?', count not loaded':has?', '+n+' shipment'+(n===1?'':'s')+' this season':', no shipments yet')},
@@ -14681,8 +14764,15 @@ function ShipLanding(props){
             n===undefined?ce('span',{className:'sv2l-cnt sk','aria-hidden':'true'}):has?ce('span',{className:'sv2l-cnt','aria-hidden':'true'},String(n)):null),
           ce('b',null,p.name||p.id),
           ar&&ce('span',{className:'sv2l-ar',lang:'ar',dir:'rtl','aria-hidden':'true'},ar));
-      })),
-    ce('span',{className:'sv2l-more','aria-hidden':'true'},'›'));
+  }
+  var rowDefs=SV2L_LINES.filter(function(L){return L.id===line;}).map(function(L){return {k:L.id,en:L.en,ar:L.ar,ps:prods};});
+  var strip=ce('div',{className:'sv2l-stripw'},
+    ce('div',{className:'sv2l-strip rows',role:'tablist','aria-label':'Products',ref:stripRef,onKeyDown:onKey,
+        onBlur:function(e){if(!stripRef.current||!stripRef.current.contains(e.relatedTarget))setFocusId(null);}},   /* Tab back in lands on the selected bubble */
+      rowDefs.map(function(r){
+        return ce('div',{key:r.k,className:'sv2l-prow',role:'presentation'},
+          ce('div',{className:'sv2l-bubs',role:'presentation'},r.ps.map(chip)));
+      })));
 
   function openBtn(p){return ce('button',{type:'button',className:'sv2l-cta',onClick:function(){props.onOpen(p.id);}},'Open '+(p.name||p.id)+' shipments →');}
   function skel(h,w){return ce('span',{className:'sv2l-sk',style:{height:h,width:w||'100%'}});}
@@ -14690,7 +14780,7 @@ function ShipLanding(props){
   if(!curP){
     panel=ce('div',{className:'sv2l-card',style:{gridColumn:'1/-1'}},skel(30,'40%'),ce('div',{style:{height:14}}),skel(160));
   } else {
-    var ar=SV2L_AR[curP.id]||'',d=data&&data.key===seasonId+'|'+cur?data:null,sum=d&&d.sum;
+    var ar=SV2L_AR[curP.id]||curP.ar||'',d=data&&data.key===seasonId+'|'+cur?data:null,sum=d&&d.sum;
     var title=ce('div',{className:'sv2l-ttl'},ce('h2',null,curP.name||curP.id),ar&&ce('span',{className:'sv2l-ar',lang:'ar',dir:'rtl'},ar),
       ce('span',{className:'sv2l-live'},'Season '+(seasonName||'—')+(d&&d.at?' · updated '+sv2lCairoTime(d.at):'')));
     if(curN===0||(sum&&sum.n===0)){
@@ -14734,10 +14824,41 @@ function ShipLanding(props){
               ce('span',{className:'bar','aria-hidden':'true'},ce('i',{style:{width:Math.max(3,t.n/dm*100)+'%'}})),ce('b',null,String(t.n)));})):null)];
     }
   }
+  var lineObj=SV2L_LINES.find(function(L){return L.id===line;});
+  /* same step tabs as the Export Inspection start page (index.html .lg-* styles): Line › Product */
+  var stepTabs=ce('ol',{className:'lg-stp sv2l-stp','aria-label':'Progress'},
+    [{n:1,l:'Line',st:line?'done':'cur',v:lineObj?lineObj.en+' · '+lineObj.ar:''},{n:2,l:'Product',st:line?'cur':'todo',v:''}].map(function(t){
+      var inner=[ce('span',{key:'n',className:'lg-sn'},t.st==='done'?'✓':t.n),
+        ce('span',{key:'l',className:'lg-sl'},t.l,t.st==='done'&&t.v?ce('small',null,t.v):null),
+        t.st==='done'?ce('span',{key:'c',className:'lg-chg'},'Change'):null];
+      return ce('li',{key:t.l,className:t.st},t.st==='done'?ce('button',{type:'button',onClick:function(){setLine(null);}},inner):ce('span',null,inner));
+    }));
+  if(!line){
+    /* step 1: line cards, centred and stacked, styled like the Export Inspection line step */
+    return ce('div',{className:'sv2l',ref:rootRef},
+      ce('div',{className:'sv2l-pick'},
+        ce('div',{className:'sv2l-pickhd'},ce('h1',null,'Shipments'),ce('p',null,'Pick a line of business'+(seasonName?' · Season '+seasonName:''))),
+        stepTabs,
+        ce('div',{className:'sv2l-lines'+(going?' going':'')},SV2L_LINES.map(function(L,i){
+          var ps=allProds.filter(function(p){return lineOfProd(p.id)===L.id;});if(!ps.length)return null;
+          var known=ps.filter(function(p){return counts[p.id]!=null;}),n=known.reduce(function(t,p){return t+(+counts[p.id]||0);},0);
+          return ce('button',{key:L.id,type:'button',disabled:!!going,
+              className:'lg-line lg-panel lg-'+L.id+' sv2l-lcard'+(going===L.id?' picked':going?' away':''),style:{animationDelay:(i*70)+'ms'},
+              onClick:function(){chooseLine(L.id);}},
+            ce('span',{className:'lg-ic','aria-hidden':'true',dangerouslySetInnerHTML:{__html:L.icon}}),
+            ce('span',{className:'lg-lt'},
+              ce('span',{className:'lg-nm'},L.en,' ',ce('span',{className:'lg-ar'},L.ar)),
+              ce('span',{className:'lg-hint'},ps.map(function(p){return p.name||p.id;}).join(' · '))),
+            ce('span',{className:'lg-ls'},ce('b',null,known.length?n.toLocaleString():'—'),ce('small',null,'shipments'),ce('b',null,String(ps.length)),ce('small',null,'products')),
+            ce('span',{className:'sv2l-go','aria-hidden':'true'},'→'));
+        }))));
+  }
   return ce('div',{className:'sv2l',ref:rootRef},
-    ce('div',{className:'sv2l-hd'},ce('h1',null,'Shipments'),ce('p',null,'Tap a product for its season at a glance, then open its records.')),
+    ce('div',{className:'sv2l-hd'},ce('p',null,'Tap a product for its season at a glance, then open its records.')),   /* no second 'Shipments' title: the top bar has it */
+    ce('div',{className:'sv2l-stepw'},stepTabs),
+    ce('div',{key:'in-'+line,className:'sv2l-enter'},
     strip,
-    ce('section',{className:'sv2l-panel',id:'sv2l-panel',role:'tabpanel','aria-labelledby':cur?'sv2l-tab-'+cur:undefined,style:curP?colors(curP):undefined},panel));
+    ce('section',{className:'sv2l-panel',id:'sv2l-panel',role:'tabpanel','aria-labelledby':cur?'sv2l-tab-'+cur:undefined,style:curP?colors(curP):undefined},panel)));
 }
 function ShipmentsMgmt(props){
 
@@ -14773,10 +14894,10 @@ function ShipmentsMgmt(props){
   var sAggMode=useState(true); var aggMode=sAggMode[0]; var setAggMode=sAggMode[1];
   /* Manage = shipment entry sandbox (shipments_v2.js), editors only; never writes public.shipments */
   /* only products the entry tool supports (orchards + potatoes); Berries/Olives have no form yet */
-  var shipPT=selProd==='potatoes'||selProd==='other_crops';   /* Other crops shows the Pivots columns */
+  var shipPT=selProd==='potatoes'||selProd==='other_crops'||isOcCrop(selProd);   /* Other crops shows the Pivots columns */
   /* 2026-11-26 step 2 (Tarek): every product that has Manage shows ONLY Manage (old record views retired there);
      people without edit rights get it read-only. Berries / Olives (no Manage) keep the old view. */
-  var manageProduct=(['citrus','grapes','mango','pomegranate','potatoes'].indexOf(selProd)>=0||(selProd==='other_crops'&&otherCropsOn()));
+  var manageProduct=(['citrus','grapes','mango','pomegranate','potatoes'].indexOf(selProd)>=0||((selProd==='other_crops'||isOcCrop(selProd))&&otherCropsOn()));
   var canManage=!!(props.perms&&props.perms.editShipments)&&manageProduct;
   /* 2026-11-26 (Tarek): Manage is the main page of each product for people who can edit shipments (others keep All rows) */
   /* 2026-11-26 step 1 (Tarek): editors always see Manage (no tab row); people without edit rights keep All rows / By container
@@ -14800,6 +14921,7 @@ function ShipmentsMgmt(props){
   var sClaimCur=useState('USD'); var claimCur=sClaimCur[0]; var setClaimCur=sClaimCur[1];
   /* product container counts for hero */
   var sProdCounts=useState({}); var prodCounts=sProdCounts[0]; var setProdCounts=sProdCounts[1];
+  var ocCrops=useOcCrops();   /* Other crops entries, one per crop */
 
   /* Reset product selection when season changes */
   React.useEffect(function(){
@@ -14827,6 +14949,14 @@ function ShipmentsMgmt(props){
       if(r&&!r.error&&r.data&&typeof r.data==='object'){
         var d=r.data;setProdCounts(function(prev){var o=Object.assign({},prev);prods.forEach(function(p){o[p.id]=+d[p.id]||0;});
           if(otherCropsOn())o.other_crops=+d.other_crops||0;return o;});
+        /* per-crop counts (container + loading date) from the same list the crop pages show */
+        if(otherCropsOn())ocLoadCrops().then(function(crops){if(!crops)return;
+          sv2lFetch(seasonAtCall,'other_crops').then(function(res){if(seasonAtCall!==config.activeSeasonId)return;
+            var cs=(res&&!res.error&&res.data&&res.data.containers)||null,c={};
+            crops.forEach(function(cp){c[cp.id]=cs?0:null;});
+            (cs||[]).forEach(function(k){var id='oc:'+((k.hdr||{}).crop||'');if(c[id]!==undefined)c[id]++;});
+            setProdCounts(function(prev){return Object.assign({},prev,c);});
+          },function(){});});
       } else oldCounts();
     },oldCounts);
     function oldCounts(){
@@ -15071,7 +15201,7 @@ function ShipmentsMgmt(props){
       onOpen:function(id){setSelProd(id);},   /* exactly what a product card does */
       onOpenRow:function(id,ref,loaded){setSelProd(id);if(sv2lHasOverview(id))sv2lOpenRowWhenListed(ref,loaded);}});
     var prodList=(config.products||[]).filter(function(p){return p.active!==false;});
-    if(otherCropsOn()&&!prodList.some(function(p){return p.id==='other_crops';}))prodList=prodList.concat([OC_PRODUCT]);   /* Shipments only */
+    prodList=ocWithCrops(prodList,ocCrops);   /* Shipments only: Other crops = one card per crop */
     var greeting=(function(){var h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening';})();
     var firstName=currentUser.name?currentUser.name.split(' ')[0]:'';
     return ce('div',{className:'landing',style:{paddingTop:0}},
@@ -15209,7 +15339,7 @@ function ShipmentsMgmt(props){
   var filteredRows=shipments.filter(matchesFilters);
   var filteredContainers=containers.filter(containerMatchesFilters);
 
-  var selProdObj=(config.products||[]).find(function(p){return p.id===selProd;})||(selProd==='other_crops'?OC_PRODUCT:{name:selProd,color:'var(--accent)'});
+  var selProdObj=(config.products||[]).find(function(p){return p.id===selProd;})||(isOcCrop(selProd)?(ocProductObj(selProd)||{name:'Other crops',color:OC_CROP_COLOR}):selProd==='other_crops'?OC_PRODUCT:{name:selProd,color:'var(--accent)'});
   var totalClaims=grades.filter(function(g){return g.has_claim;}).length;
   var totalGraded=grades.filter(function(g){return g.grade;}).length;
 
@@ -15503,7 +15633,7 @@ inspCount>0&&ce('div',{style:{marginBottom:16}},
       /* Table content */
       ce('div',{style:{padding:'12px 16px 16px'}},
       /* Table — or the Manage sandbox */
-      manage?ce(ShipV2Host,{apiRef:shipV2Api,product:selProd,productName:selProdObj.name,productColor:selProdObj.color,
+      manage?ce(ShipV2Host,{apiRef:shipV2Api,product:ocBaseProduct(selProd),cropCode:ocCropCode(selProd),productName:selProdObj.name,productColor:selProdObj.color,
         seasonId:config.activeSeasonId,seasonName:((config.seasons||[]).find(function(x){return x.id===config.activeSeasonId;})||{}).name||'',
         trueActiveSeasonId:config.trueActiveSeasonId,trueActiveSeasonName:((config.seasons||[]).find(function(x){return x.id===config.trueActiveSeasonId;})||{}).name||'',
         canConfigure:currentUser.role==='admin',readOnly:!canManage}):
